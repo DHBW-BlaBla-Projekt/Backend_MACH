@@ -60,15 +60,20 @@ public class RideService {
      * @param rideRepository      Repository zur Persistenz der Mitfahrten
      * @param connectionFactory   ConnectionFactory für RabbitMQ-Verbindungen
      */
-    public RideService(RideRepository rideRepository, CachingConnectionFactory connectionFactory) {
+    public RideService(
+            RideRepository rideRepository,
+            CachingConnectionFactory connectionFactory,
+            @Value("${app.rabbitmq.enabled:false}") boolean rabbitmqEnabled) {
         this.rideRepository = rideRepository;
         
         // Prüfe ob RabbitMQ erreichbar ist
         boolean available = false;
-        try (Connection conn = connectionFactory.createConnection()) {
-            available = true;
-        } catch (Exception e) {
-            log.warn("RabbitMQ nicht verfügbar: {}", e.getMessage());
+        if (rabbitmqEnabled) {
+            try (Connection conn = connectionFactory.createConnection()) {
+                available = true;
+            } catch (Exception e) {
+                log.warn("RabbitMQ nicht verfügbar: {}", e.getMessage());
+            }
         }
         this.rabbitmqAvailable = available;
         
@@ -293,7 +298,7 @@ public class RideService {
     // --- RabbitMQ Events ---
 
     private void publishRideOfferedEvent(RideOffer ride) {
-        if (rabbitTemplate == null) {
+        if (!rabbitmqAvailable || rabbitTemplate == null) {
             log.warn("RabbitTemplate ist null — kann Event nicht senden. Ride gespeichert aber nicht publiziert: {}", ride.getId());
             return;
         }
@@ -320,7 +325,7 @@ public class RideService {
      * @param ride Die stornierte Mitfahrt, über die informiert werden soll
      */
     private void publishRideCancelledEvent(RideOffer ride) {
-        if (rabbitTemplate == null) return;
+        if (!rabbitmqAvailable || rabbitTemplate == null) return;
         try {
             RideCancelledEvent event = new RideCancelledEvent();
             event.setRideId(ride.getId());

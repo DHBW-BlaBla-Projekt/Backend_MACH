@@ -41,3 +41,7 @@ dependencies {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+tasks.register("stage") {
+	dependsOn(tasks.named("bootJar"))
+}

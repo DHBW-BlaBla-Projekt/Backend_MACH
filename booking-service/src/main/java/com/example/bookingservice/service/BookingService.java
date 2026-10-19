@@ -61,15 +61,18 @@ public class BookingService {
      */
     public BookingService(BookingRepository bookingRepository,
                           RideOfferClient rideOfferClient,
-                          org.springframework.amqp.rabbit.connection.CachingConnectionFactory connectionFactory) {
+                          org.springframework.amqp.rabbit.connection.CachingConnectionFactory connectionFactory,
+                          @Value("${app.rabbitmq.enabled:false}") boolean rabbitmqEnabled) {
         this.bookingRepository = bookingRepository;
         this.rideOfferClient = rideOfferClient;
 
         boolean available = false;
-        try (var conn = connectionFactory.createConnection()) {
-            available = true;
-        } catch (Exception e) {
-            log.warn("RabbitMQ nicht verfügbar: {}", e.getMessage());
+        if (rabbitmqEnabled) {
+            try (var conn = connectionFactory.createConnection()) {
+                available = true;
+            } catch (Exception e) {
+                log.warn("RabbitMQ nicht verfügbar: {}", e.getMessage());
+            }
         }
 
         this.rabbitmqAvailable = available;

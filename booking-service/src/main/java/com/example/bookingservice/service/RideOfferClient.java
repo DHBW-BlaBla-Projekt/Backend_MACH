@@ -1,6 +1,6 @@
 package com.example.bookingservice.service;
 
-import com.example.bookingservice.entity.Booking;
+import com.example.bookingservice.dto.RideInfoDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,11 +28,11 @@ public class RideOfferClient {
     /**
      * Hole eine einzelne Mitfahrt über den Ride-Offer-Service.
      */
-    public Map<String, Object> getRideById(Long rideId) {
+    public RideInfoDto getRideById(Long rideId) {
         String url = rideOfferServiceUrl + "/api/rides/" + rideId;
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    url, HttpMethod.GET, null, Map.class);
+            ResponseEntity<RideInfoDto> response = restTemplate.exchange(
+                    url, HttpMethod.GET, null, RideInfoDto.class);
             return response.getBody();
         } catch (HttpClientErrorException.NotFound e) {
             return null;

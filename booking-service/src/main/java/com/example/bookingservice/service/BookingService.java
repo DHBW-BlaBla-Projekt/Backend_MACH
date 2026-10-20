@@ -18,21 +18,6 @@ import java.util.stream.Collectors;
 
 /**
  * Geschäftslogik-Service für Buchungen.
- *
- * <p>Dient der zentralen Verwaltung von Buchungen, einschließlich Erstellung, Suche
- * und Stornierung. Darüber hinaus werden ereignisgesteuerte Updates über RabbitMQ
- * publiziert.</p>
- *
- * <h2>Hauptverantwortlichkeiten:</h2>
- * <ul>
- *   <li>Erstellen von Buchungen für Mitfahrten</li>
- *   <li>Abrufen von Buchungen nach Mitfahrt oder Passagier</li>
- *   <li>Stornieren von Buchungen mit Event-Auslösung</li>
- *   <li>Validierung der Mitfahrt-Verfügbarkeit über den RideOfferClient</li>
- * </ul>
- *
- * @see com.example.bookingservice.entity.Booking
- * @see BookingController
  */
 @Service
 public class BookingService {
@@ -50,16 +35,6 @@ public class BookingService {
     @Value("${app.rabbitmq.routing.key.booking:booking.routing}")
     private String bookingRoutingKey;
 
-    /**
-     * Konstruktor mit Dependency Injection.
-     *
-     * <p>Überprüft die Erreichbarkeit von RabbitMQ und initialisiert den
-     * {@link RabbitTemplate} entsprechend der Verfügbarkeit.</p>
-     *
-     * @param bookingRepository      Repository zur Persistenz der Buchungen
-     * @param rideOfferClient        Client zum Abrufen von Mitfahrtinformationen
-     * @param connectionFactory      ConnectionFactory für RabbitMQ-Verbindungen
-     */
     public BookingService(BookingRepository bookingRepository,
                           RideOfferClient rideOfferClient,
                           org.springframework.amqp.rabbit.connection.CachingConnectionFactory connectionFactory,
@@ -93,67 +68,44 @@ public class BookingService {
         this.rabbitTemplate = template;
     }
 
-    /**
-     * Erstellt eine neue Buchung für eine Mitfahrt.
-     *
-     * <p>Validiert zuerst, ob die angegebene Mitfahrt existiert und noch verfügbar ist,
-     * und prüft zudem, ob bereits eine aktive Buchung vorliegt und genug freie Plätze vorhanden sind.</p>
-     *
-     * @param username  Der Benutzername des Passagiers
-     * @param request   DTO mit der ID der anzubuchenden Mitfahrt
-     * @return Das neu erstellte {@link BookingResponse}-Objekt
-     * @throws IllegalArgumentException Wenn die Ride-ID fehlt oder die Mitfahrt nicht gefunden wurde
-     * @throws IllegalStateException    Wenn die Mitfahrt nicht mehr verfügbar ist oder keine Plätze frei sind
-     */
-    /**
-     * Neue Buchung erstellen.
-     */
     @Transactional
     public BookingResponse createBooking(String username, CreateBookingRequest request) {
-        // Validiere: Ride ID muss übergeben werden
         if (request.getRideId() == null) {
             throw new IllegalArgumentException("Ride ID is required");
         }
 
         Long rideId = request.getRideId();
-
-        // Prüfe ob die Mitfahrt existiert und noch verfügbar ist
         RideInfoDto rideInfo = rideOfferClient.getRideById(rideId);
+        
         if (rideInfo == null) {
             throw new IllegalArgumentException("Mitfahrt nicht gefunden: " + rideId);
         }
 
-        // Prüfe ob die Mitfahrt noch "OFFERED" ist
         String status = rideInfo.getStatus();
         if (!"OFFERED".equals(status)) {
             throw new IllegalStateException("Die Mitfahrt ist nicht mehr verfügbar. Status: " + status);
         }
 
-        // Prüfe ob die Mitfahrt in der Vergangenheit liegt
         java.time.LocalDateTime departureTime = rideInfo.getDepartureTime();
         if (departureTime != null && departureTime.isBefore(java.time.LocalDateTime.now())) {
             throw new IllegalStateException("Die Abfahrtszeit liegt bereits in der Vergangenheit.");
         }
 
-        // Prüfe ob die Buchung schon existiert
         if (bookingRepository.existsByRideIdAndStatus(rideId, Booking.BookingStatus.CONFIRMED)) {
             throw new IllegalStateException("Es gibt bereits eine bestätigte Buchung für diese Mitfahrt.");
         }
 
-        // Prüfe ob genug Plätze frei sind
         Integer availableSeats = rideInfo.getAvailableSeats();
         if (availableSeats != null && availableSeats <= 0) {
             throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt.");
         }
 
-        // Buchung erstellen
         Booking booking = new Booking(rideId, username);
         Booking savedBooking = bookingRepository.save(booking);
 
         log.info("Neue Buchung {} erstellt für User {}, Ride {}", 
                 savedBooking.getId(), username, rideId);
 
-        // Sende RabbitMQ Event dass eine Buchung erstellt wurde
         if (rabbitTemplate != null) {
             try {
                 Map<String, Object> event = Map.of(
@@ -171,15 +123,6 @@ public class BookingService {
         return BookingResponse.fromEntity(savedBooking);
     }
 
-    /**
-     * Alle Buchungen für eine Mitfahrt abrufen.
-     *
-     * @param rideId Die ID der Mitfahrt, für die die Buchungen abgerufen werden sollen
-     * @return Liste der {@link BookingResponse}-Objekte für alle Buchungen der Mitfahrt
-     */
-    /**
-     * Alle Buchungen für eine Mitfahrt abrufen.
-     */
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsForRide(Long rideId) {
         return bookingRepository.findByRideId(rideId)
@@ -188,15 +131,15 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Alle Buchungen eines Passagiers abrufen.
-     *
-     * @param username Der Benutzername des Passagiers
-     * @return Liste der {@link BookingResponse}-Objekte für alle Buchungen des Passagiers
-     */
-    /**
-     * Alle Buchungen eines Passagiers abrufen.
-     */
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getMyBookings(String username) {
+        // Nur aktive Buchungen (nicht stornierte) zurückgeben
+        return bookingRepository.findByPassengerUsernameAndStatus(username, Booking.BookingStatus.CONFIRMED)
+                .stream()
+                .map(BookingResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByPassenger(String username) {
         return bookingRepository.findByPassengerUsername(username)
@@ -205,16 +148,6 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Buchung stornieren.
-     *
-     * @param bookingId Die ID der zu stornierenden Buchung
-     * @param username  Der Benutzername des Passagiers (zur Berechtigungsprüfung)
-     * @throws IllegalStateException Wenn die Buchung bereits storniert ist
-     */
-    /**
-     * Buchung stornieren.
-     */
     @Transactional
     public void cancelBooking(Long bookingId, String username) {
         Booking booking = bookingRepository.findByIdAndPassengerUsername(bookingId, username)
@@ -227,7 +160,6 @@ public class BookingService {
         booking.setStatus(Booking.BookingStatus.CANCELLED);
         bookingRepository.save(booking);
 
-        // Sende Event zum Stornieren der Buchung über RabbitMQ
         if (rabbitTemplate != null) {
             try {
                 Map<String, Object> event = Map.of(

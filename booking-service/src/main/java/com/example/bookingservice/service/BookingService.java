@@ -88,13 +88,15 @@ public class BookingService {
             throw new IllegalStateException("Die Abfahrtszeit liegt bereits in der Vergangenheit.");
         }
 
-        if (bookingRepository.existsByRideIdAndStatus(rideId, Booking.BookingStatus.CONFIRMED)) {
-            throw new IllegalStateException("Es gibt bereits eine bestätigte Buchung für diese Mitfahrt.");
+        long confirmedBookingsCount = bookingRepository.countByRideIdAndStatus(rideId, Booking.BookingStatus.CONFIRMED);
+        Integer availableSeats = rideInfo.getAvailableSeats();
+        if (availableSeats == null) {
+            throw new IllegalStateException("Anzahl der freien Plätze konnte nicht ermittelt werden.");
         }
 
-        Integer availableSeats = rideInfo.getAvailableSeats();
-        if (availableSeats != null && availableSeats <= 0) {
-            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt.");
+        long remainingSeats = availableSeats - confirmedBookingsCount;
+        if (remainingSeats <= 0) {
+            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt. (Freie Plätze: " + remainingSeats + ")");
         }
 
         Booking booking = new Booking(rideId, username);
@@ -102,6 +104,9 @@ public class BookingService {
 
         log.info("Neue Buchung {} erstellt für User {}, Ride {}", 
                 savedBooking.getId(), username, rideId);
+
+        // Dekrementiere die verfügbaren Plätze im Ride-Offer-Service
+        rideOfferClient.decrementAvailableSeats(rideId);
 
         if (rabbitTemplate != null) {
             try {
@@ -130,8 +135,8 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookings(String username) {
-        // Case-insensitive Suche nach aktiven Buchungen
-        return bookingRepository.findByPassengerUsernameAndStatusIgnoreCase(username, Booking.BookingStatus.CONFIRMED)
+        // Exact match for the current user's bookings with CONFIRMED status
+        return bookingRepository.findByPassengerUsernameAndStatus(username, Booking.BookingStatus.CONFIRMED)
                 .stream()
                 .map(BookingResponse::fromEntity)
                 .collect(Collectors.toList());
@@ -139,8 +144,8 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByPassenger(String username) {
-        // Case-insensitive Suche nach allen Buchungen
-        return bookingRepository.findByPassengerUsernameIgnoreCase(username)
+        // Exact match for all bookings by passenger
+        return bookingRepository.findByPassengerUsername(username)
                 .stream()
                 .map(BookingResponse::fromEntity)
                 .collect(Collectors.toList());
@@ -157,6 +162,10 @@ public class BookingService {
 
         booking.setStatus(Booking.BookingStatus.CANCELLED);
         bookingRepository.save(booking);
+
+        // Freigebe den Sitz wieder im Ride-Offer-Service
+        rideOfferClient.incrementAvailableSeats(booking.getRideId());
+
 
         if (rabbitTemplate != null) {
             try {

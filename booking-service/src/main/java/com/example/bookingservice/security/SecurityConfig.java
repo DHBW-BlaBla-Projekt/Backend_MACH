@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/bookings/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bookings/ride/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/validate-rating").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

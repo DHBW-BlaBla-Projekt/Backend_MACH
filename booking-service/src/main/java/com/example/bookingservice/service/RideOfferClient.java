@@ -9,8 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
-
 @Service
 public class RideOfferClient {
 
@@ -43,15 +41,48 @@ public class RideOfferClient {
     }
 
     /**
+     * Dekrementiere die verfügbaren Sitze um 1 für eine gegebene Mitfahrt.
+     */
+    public void decrementAvailableSeats(Long rideId) {
+        String url = rideOfferServiceUrl + "/api/rides/" + rideId + "/decrement";
+        try {
+            restTemplate.exchange(url, HttpMethod.PATCH, null, Void.class);
+            log.info("Verfügbare Plätze für Mitfahrt {} dekrementiert.", rideId);
+        } catch (Exception e) {
+            log.error("Fehler beim Dekrementieren der verfügbaren Plätze für Ride {}: {}", rideId, e.getMessage());
+        }
+    }
+
+    /**
+     * Inkrementiere die verfügbaren Sitze um 1 für eine gegebene Mitfahrt (wird bei Stornierung genutzt).
+     */
+    public void incrementAvailableSeats(Long rideId) {
+        String url = rideOfferServiceUrl + "/api/rides/" + rideId + "/increment";
+        try {
+            restTemplate.exchange(url, HttpMethod.PATCH, null, Void.class);
+            log.info("Verfügbare Plätze für Mitfahrt {} inkrementiert.", rideId);
+        } catch (Exception e) {
+            log.error("Fehler beim Inkrementieren der verfügbaren Plätze für Ride {}: {}", rideId, e.getMessage());
+        }
+    }
+
+    /**
      * Storniere eine Buchung im Ride-Offer-Service (optional).
      */
     public void notifyRideCancelled(Long rideId) {
         String url = rideOfferServiceUrl + "/api/rides/" + rideId + "/cancel";
         try {
-            restTemplate.patchForObject(url, null, Map.class);
+            restTemplate.exchange(url, HttpMethod.PATCH, null, Void.class);
             log.info("Ride {} storniert über Ride-Offer-Service", rideId);
         } catch (Exception e) {
             log.warn("Fehler beim Stornieren der Mitfahrt {}: {}", rideId, e.getMessage());
         }
+    }
+
+    /**
+     * Hole den URL des Ride-Offer-Services.
+     */
+    public String getRideOfferServiceUrl() {
+        return rideOfferServiceUrl;
     }
 }

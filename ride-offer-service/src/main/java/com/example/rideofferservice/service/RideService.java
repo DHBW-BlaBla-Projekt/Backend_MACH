@@ -290,6 +290,52 @@ public class RideService {
         log.info("Mitfahrt {} wurde von {} gelöscht.", id, username);
     }
 
+
+    /**
+     * Decrements the available seats by 1 for the given ride.
+     */
+    @Transactional
+    public RideResponse decrementAvailableSeats(Long id) {
+        RideOffer ride = rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
+
+        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
+            throw new IllegalStateException("Die Mitfahrt ist storniert.");
+        }
+        if (ride.getAvailableSeats() <= 0) {
+            throw new IllegalStateException("Keine freien Sitze mehr vorhanden.");
+        }
+
+        ride.setAvailableSeats(ride.getAvailableSeats() - 1);
+        if (ride.getAvailableSeats() == 0) {
+            ride.setStatus(RideOffer.RideStatus.FULFILLED);
+        }
+        rideRepository.save(ride);
+        log.info("Freie Sitze für Mitfahrt {} dekrementiert: {}", id, ride.getAvailableSeats());
+        return RideResponse.fromEntity(ride);
+    }
+
+    /**
+     * Increments the available seats by 1 for the given ride.
+     */
+    @Transactional
+    public RideResponse incrementAvailableSeats(Long id) {
+        RideOffer ride = rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
+
+        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
+            throw new IllegalStateException("Die Mitfahrt ist storniert.");
+        }
+
+        ride.setAvailableSeats(ride.getAvailableSeats() + 1);
+        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
+            ride.setStatus(RideOffer.RideStatus.OFFERED);
+        }
+        rideRepository.save(ride);
+        log.info("Freie Sitze für Mitfahrt {} inkrementiert: {}", id, ride.getAvailableSeats());
+        return RideResponse.fromEntity(ride);
+    }
+
     /**
      * Publiziert ein {@code RideOfferedEvent} über RabbitMQ.
      *

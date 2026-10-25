@@ -2,21 +2,13 @@ package com.example.authservice.model.entity;
 
 import jakarta.persistence.*;
 
-/**
- * Entität zur Speicherung und Abbildung eines Benutzers in der Datenbank.
- *
- * <p>Diese Klasse repräsentiert einen registrierten Benutzer im System und enthält
- * alle für die Authentifizierung notwendigen Daten wie Username, Passwort (hashing), Rolle sowie den Aktivierungsstatus.</p>
- *
- * @see com.example.authservice.repository.UserRepository
- */
-//Speicherung/Mapping des Users in der DB
 @Entity
 @Table(name = "users")
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_seq")
+    @SequenceGenerator(name = "user_seq", sequenceName = "users_id_seq", allocationSize = 1)
     private Long id;
 
     @Column(nullable = false, unique = true, length = 50)
@@ -31,17 +23,8 @@ public class User {
     @Column(nullable = false)
     private boolean active = true;
 
-    /** Standard-Konstruktor für JPA. */
     public User() {}
 
-    /**
-     * Erzeugt einen neuen Benutzer mit den angegebenen Daten.
-     *
-     * @param username  Der eindeutige Benutzername
-     * @param password  Das gehashte Passwort des Benutzers
-     * @param role      Die Rolle des Benutzers (z.B. "USER")
-     * @param active    Gibt an, ob der Account aktiviert ist
-     */
     public User(String username, String password, String role, boolean active) {
         this.username = username;
         this.password = password;

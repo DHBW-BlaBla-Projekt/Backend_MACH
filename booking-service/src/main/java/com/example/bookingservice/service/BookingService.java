@@ -16,9 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Geschäftslogik-Service für Buchungen.
- */
 @Service
 public class BookingService {
 
@@ -91,17 +88,25 @@ public class BookingService {
             throw new IllegalStateException("Die Abfahrtszeit liegt bereits in der Vergangenheit.");
         }
 
-        if (bookingRepository.existsByRideIdAndStatus(rideId, Booking.BookingStatus.CONFIRMED)) {
-            throw new IllegalStateException("Es gibt bereits eine bestätigte Buchung für diese Mitfahrt.");
-        }
-
+        long confirmedBookingsCount = bookingRepository.countByRideIdAndStatus(rideId, Booking.BookingStatus.CONFIRMED);
         Integer availableSeats = rideInfo.getAvailableSeats();
-        if (availableSeats != null && availableSeats <= 0) {
-            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt.");
+        if (availableSeats == null) {
+            throw new IllegalStateException("Anzahl der freien Plätze konnte nicht ermittelt werden.");
         }
 
-        Booking booking = new Booking(rideId, username);
-        Booking savedBooking = bookingRepository.save(booking);
+        long remainingSeats = availableSeats - confirmedBookingsCount;
+        if (remainingSeats <= 0) {
+            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt. (Freie Plätze: " + remainingSeats + ")");
+        }
+
+        // Versuche atomar einen Sitz zu buchen. 
+        // Falls keine Sitze mehr frei sind, schlägt dies fehl und die Buchung wird nicht erstellt. 
+        if (!rideOfferClient.tryBookSeat(rideId)) { 
+            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt."); 
+        } 
+
+        Booking booking = new Booking(rideId, username); 
+        Booking savedBooking = bookingRepository.save(booking); 
 
         log.info("Neue Buchung {} erstellt für User {}, Ride {}", 
                 savedBooking.getId(), username, rideId);
@@ -133,7 +138,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookings(String username) {
-        // Nur aktive Buchungen (nicht stornierte) zurückgeben
+        // Exact match for the current user's bookings with CONFIRMED status
         return bookingRepository.findByPassengerUsernameAndStatus(username, Booking.BookingStatus.CONFIRMED)
                 .stream()
                 .map(BookingResponse::fromEntity)
@@ -142,6 +147,7 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByPassenger(String username) {
+        // Exact match for all bookings by passenger
         return bookingRepository.findByPassengerUsername(username)
                 .stream()
                 .map(BookingResponse::fromEntity)
@@ -150,7 +156,7 @@ public class BookingService {
 
     @Transactional
     public void cancelBooking(Long bookingId, String username) {
-        Booking booking = bookingRepository.findByIdAndPassengerUsername(bookingId, username)
+        Booking booking = bookingRepository.findByIdAndPassengerUsernameIgnoreCase(bookingId, username)
                 .orElseThrow(() -> new RuntimeException("Buchung nicht gefunden oder gehört nicht zu diesem Benutzer."));
 
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
@@ -159,6 +165,10 @@ public class BookingService {
 
         booking.setStatus(Booking.BookingStatus.CANCELLED);
         bookingRepository.save(booking);
+
+        // Freigebe den Sitz wieder im Ride-Offer-Service
+        rideOfferClient.incrementAvailableSeats(booking.getRideId());
+
 
         if (rabbitTemplate != null) {
             try {

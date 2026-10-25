@@ -36,6 +36,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:8080",
+                "http://localhost:8082",
                 "https://mfz-frontend-lovat.vercel.app"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
@@ -53,6 +54,7 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+    
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -65,6 +67,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/rides/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/rides/*").permitAll()
+                        // Inter-service Calls vom Booking-Service erlauben (PATCH decrement/increment/cancel/book)
+                        .requestMatchers(HttpMethod.PATCH, "/api/rides/*/decrement").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/rides/*/increment").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/rides/*/cancel").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/rides/*/book").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

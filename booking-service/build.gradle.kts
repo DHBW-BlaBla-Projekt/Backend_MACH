@@ -24,6 +24,9 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-amqp")
 
+	// HTTP Client support for PATCH — Version muss zu Spring Boot 3.4.x passen (Spring verwendet httpclient5 5.4.x)
+	implementation("org.apache.httpcomponents.client5:httpclient5:5.4.1")
+
 	// JWT
 	implementation("io.jsonwebtoken:jjwt-api:0.12.6")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")

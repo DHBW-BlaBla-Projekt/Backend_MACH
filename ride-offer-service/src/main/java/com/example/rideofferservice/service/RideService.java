@@ -10,6 +10,7 @@ import org.springframework.amqp.rabbit.connection.Connection;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,21 +21,6 @@ import java.util.stream.Collectors;
 
 /**
  * Geschäftslogik-Service für Mitfahrtsangebote.
- *
- * <p>Dient der zentralen Verwaltung von Mitfahrten, einschließlich Erstellen,
- * Suchen, Stornieren und Löschen. Darüber hinaus werden ereignisgesteuerte Updates
- * über RabbitMQ publiziert.</p>
- *
- * <h2>Hauptverantwortlichkeiten:</h2>
- * <ul>
- *   <li>Anbieten und Abrufen von Mitfahrten</li>
- *   <li>Suchen nach Mitfahrten (Start, Ziel, Zeitraum)</li>
- *   <li>Verwalten des Mitfahrtsstatus (OFFERED, CANCELLED, FULFILLED)</li>
- *   <li>Auslösen von RabbitMQ-Events bei Änderungen</li>
- * </ul>
- *
- * @see com.example.rideofferservice.entity.RideOffer
- * @see RideController
  */
 @Service
 public class RideService {
@@ -51,22 +37,12 @@ public class RideService {
     @Value("${app.rabbitmq.routing.key}")
     private String routingKey;
 
-    /**
-     * Konstruktor mit Dependency Injection.
-     *
-     * <p>Überprüft die Erreichbarkeit von RabbitMQ und initialisiert den
-     * {@link RabbitTemplate} entsprechend der Verfügbarkeit.</p>
-     *
-     * @param rideRepository      Repository zur Persistenz der Mitfahrten
-     * @param connectionFactory   ConnectionFactory für RabbitMQ-Verbindungen
-     */
     public RideService(
             RideRepository rideRepository,
             CachingConnectionFactory connectionFactory,
             @Value("${app.rabbitmq.enabled:false}") boolean rabbitmqEnabled) {
         this.rideRepository = rideRepository;
         
-        // Prüfe ob RabbitMQ erreichbar ist
         boolean available = false;
         if (rabbitmqEnabled) {
             try (Connection conn = connectionFactory.createConnection()) {
@@ -77,7 +53,6 @@ public class RideService {
         }
         this.rabbitmqAvailable = available;
         
-        // Erstelle einen null-safe RabbitTemplate falls RabbitMQ nicht da ist
         RabbitTemplate template;
         try {
             if (available) {
@@ -93,11 +68,6 @@ public class RideService {
         this.rabbitTemplate = template;
     }
 
-    /**
-     * Öffentliche Methode: Alle verfügbaren (angebotenen) Mitfahrten abrufen.
-     *
-     * @return Liste der {@link RideResponse}-Objekte für alle angebotenen Mitfahrten
-     */
     public List<RideResponse> getAvailableRides() {
         return rideRepository.findByStatus(RideOffer.RideStatus.OFFERED)
                 .stream()
@@ -105,16 +75,6 @@ public class RideService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Suche Mitfahrten mit exaktem Start und Ziel.
-     *
-     * @param startLocation Der Startort der Suchkriterien
-     * @param endLocation   Der Zielpunkt der Suchkriterien
-     * @return Liste der gefundenen {@link RideResponse}-Objekte
-     */
-    /**
-     * Suche Mitfahrten mit exaktem Start und Ziel.
-     */
     public List<RideResponse> searchRides(String startLocation, String endLocation) {
         return rideRepository.findByStartAndEndLocation(startLocation, endLocation)
                 .stream()
@@ -122,36 +82,13 @@ public class RideService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Suche Mitfahrten mit exaktem Start und Ziel innerhalb eines Zeitraums.
-     *
-     * @param startLocation Der Startort der Suchkriterien
-     * @param endLocation   Der Zielpunkt der Suchkriterien
-     * @param from          Die untere Zeitgrenze für die Abfahrt
-     * @param to            Die obere Zeitgrenze für die Abfahrt
-     * @return Liste der gefundenen {@link RideResponse}-Objekte
-     */
-    /**
-     * Suche Mitfahrten mit exaktem Start und Ziel innerhalb eines Zeitraums.
-     */
-    public List<RideResponse> searchRides(String startLocation, String endLocation, LocalDateTime from, LocalDateTime to) {
+    public List<RideResponse> searchRidesBetween(String startLocation, String endLocation, LocalDateTime from, LocalDateTime to) {
         return rideRepository.findByStartAndEndBetween(startLocation, endLocation, from, to)
                 .stream()
                 .map(RideResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Suche Mitfahrten mit exaktem Start und Ziel ab einem Zeitpunkt.
-     *
-     * @param startLocation Der Startort der Suchkriterien
-     * @param endLocation   Der Zielpunkt der Suchkriterien
-     * @param from          Die untere Zeitgrenze für die Abfahrt
-     * @return Liste der gefundenen {@link RideResponse}-Objekte
-     */
-    /**
-     * Suche Mitfahrten mit exaktem Start und Ziel ab einem Zeitpunkt.
-     */
     public List<RideResponse> searchRidesAfter(String startLocation, String endLocation, LocalDateTime from) {
         return rideRepository.findByStartAndEndAfter(startLocation, endLocation, from)
                 .stream()
@@ -159,17 +96,6 @@ public class RideService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Suche Mitfahrten mit exaktem Start und Ziel bis zu einem Zeitpunkt.
-     *
-     * @param startLocation Der Startort der Suchkriterien
-     * @param endLocation   Der Zielpunkt der Suchkriterien
-     * @param to            Die obere Zeitgrenze für die Abfahrt
-     * @return Liste der gefundenen {@link RideResponse}-Objekte
-     */
-    /**
-     * Suche Mitfahrten mit exaktem Start und Ziel bis zu einem Zeitpunkt.
-     */
     public List<RideResponse> searchRidesBefore(String startLocation, String endLocation, LocalDateTime to) {
         return rideRepository.findByStartAndEndBefore(startLocation, endLocation, to)
                 .stream()
@@ -177,23 +103,6 @@ public class RideService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Lädt eine einzelne Mitfahrt anhand ihrer ID.
-     *
-     * @param id Die ID der abzurufenden Mitfahrt
-     * @return Das {@link RideResponse}-Objekt oder {@code null}, wenn nicht gefunden
-     */
-    public RideResponse getRideById(Long id) {
-        Optional<RideOffer> ride = rideRepository.findById(id);
-        return ride.map(RideResponse::fromEntity).orElse(null);
-    }
-
-    /**
-     * Lädt alle Mitfahrten eines Fahrers.
-     *
-     * @param username Der Benutzername des Fahrers
-     * @return Liste der {@link RideResponse}-Objekte für die Mitfahrten des Fahrers
-     */
     public List<RideResponse> getMyRides(String username) {
         return rideRepository.findByDriverUsername(username)
                 .stream()
@@ -202,94 +111,111 @@ public class RideService {
     }
 
     public List<RideResponse> getMyOfferedRides(String username) {
-        return rideRepository.findByStatusAndDriverUsername(RideOffer.RideStatus.OFFERED, username)
+        return rideRepository.findByDriverUsernameAndStatus(username, RideOffer.RideStatus.OFFERED)
                 .stream()
                 .map(RideResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Erstellt ein neues Mitfahrtsangebot.
-     *
-     * @param username  Der Benutzername des Fahrers
-     * @param request   DTO mit den Daten der anzubietenden Mitfahrt
-     * @return Das neu erstellte {@link RideResponse}-Objekt
-     */
     @Transactional
     public RideResponse createRide(String username, CreateRideRequest request) {
-        RideOffer ride = new RideOffer();
-        ride.setDriverUsername(username);
-        ride.setStartLocation(request.getStartLocation());
-        ride.setEndLocation(request.getEndLocation());
-        ride.setDepartureTime(request.getDepartureTime());
-        ride.setAvailableSeats(request.getAvailableSeats());
-        ride.setStatus(RideOffer.RideStatus.OFFERED);
+        if (request.getAvailableSeats() <= 0) {
+            throw new IllegalArgumentException("Verfügbare Sitze müssen > 0 sein.");
+        }
+        if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Abfahrtsdatum muss in der Zukunft liegen.");
+        }
 
-        RideOffer saved = rideRepository.save(ride);
+        RideOffer ride = new RideOffer(
+                username,
+                request.getStartLocation(),
+                request.getEndLocation(),
+                request.getDepartureTime(),
+                request.getAvailableSeats(),
+                request.getAdditionalInfo()
+        );
+        
+        rideRepository.save(ride);
+        publishRideOfferedEvent(ride);
 
-        publishRideOfferedEvent(saved);
-
-        log.info("Neues Mitfahrtsangebot {} erstellt von {}", saved.getId(), username);
-
-        return RideResponse.fromEntity(saved);
+        log.info("Mitfahrt {} erstellt von {}", ride.getId(), username);
+        return RideResponse.fromEntity(ride);
     }
 
-    /**
-     * Storniert eine Mitfahrt.
-     *
-     * @param id       Die ID der zu stornierenden Mitfahrt
-     * @param username Der Benutzername des Fahrers (zur Berechtigungsprüfung)
-     * @return Das aktualisierte {@link RideResponse}-Objekt
-     * @throws IllegalStateException Wenn die Mitfahrt bereits storniert oder abgeschlossen ist
-     */
+    @Transactional
     public RideResponse cancelRide(Long id, String username) {
         RideOffer ride = rideRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
 
         if (!ride.getDriverUsername().equals(username)) {
-            throw new SecurityException("Nur der Fahrer kann die Mitfahrt stornieren!");
+            throw new IllegalStateException("Nur der Fahrer kann die Mitfahrt stornieren.");
         }
 
-        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
-            throw new IllegalStateException("Mitfahrt kann nicht mehr storniert werden.");
+        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
+            throw new IllegalStateException("Die Mitfahrt ist bereits storniert.");
         }
 
         ride.setStatus(RideOffer.RideStatus.CANCELLED);
-        RideOffer updated = rideRepository.save(ride);
+        ride.setFulfilledAt(LocalDateTime.now());
+        rideRepository.save(ride);
+        
+        publishRideCancelledEvent(ride);
 
-        // Sende RabbitMQ Event für stornierte Mitfahrt
-        publishRideCancelledEvent(updated);
-
-        log.info("Mitfahrt {} wurde von {} storniert.", id, username);
-
-        return RideResponse.fromEntity(updated);
+        log.info("Mitfahrt {} storniert von {}", id, username);
+        return RideResponse.fromEntity(ride);
     }
 
-    /**
-     * Löscht eine Mitfahrt.
-     *
-     * @param id       Die ID der zu löschenden Mitfahrt
-     * @param username Der Benutzername des Fahrers (zur Berechtigungsprüfung)
-     * @throws IllegalStateException Wenn die Mitfahrt abgeschlossen ist
-     */
     @Transactional
     public void deleteRide(Long id, String username) {
         RideOffer ride = rideRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
 
         if (!ride.getDriverUsername().equals(username)) {
-            throw new SecurityException("Nur der Fahrer kann die Mitfahrt löschen!");
-        }
-
-        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
-            throw new IllegalStateException("Eine abgeschlossene Mitfahrt kann nicht gelöscht werden.");
+            throw new IllegalStateException("Nur der Fahrer kann die Mitfahrt löschen.");
         }
 
         rideRepository.delete(ride);
-
-        log.info("Mitfahrt {} wurde von {} gelöscht.", id, username);
+        log.info("Mitfahrt {} gelöscht von {}", id, username);
     }
 
+    public RideResponse getRideById(Long id) {
+        Optional<RideOffer> rideOpt = rideRepository.findById(id);
+        return rideOpt.map(RideResponse::fromEntity).orElse(null);
+    }
+
+    /**
+     * Versucht atomar einen Sitzplatz zu buchen.
+     * Wirft eine IllegalStateException wenn keine Sitze frei sind.
+     * Nutzt JPA @Version für Optimistic Locking, um Race Conditions zu verhindern.
+     */
+    @Transactional
+    public RideResponse tryBookSeat(Long id) {
+        RideOffer ride = rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
+
+        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
+            throw new IllegalStateException("Die Mitfahrt ist storniert.");
+        }
+        
+        // JPA wird hier automatisch prüfen, ob das Version-Field noch aktuell ist.
+        // Falls zwischenzeitlich geschrieben wurde -> OptimisticLockingFailureException.
+        
+        if (ride.getAvailableSeats() <= 0) {
+            throw new IllegalStateException("Keine freien Sitze mehr vorhanden.");
+        }
+
+        ride.setAvailableSeats(ride.getAvailableSeats() - 1);
+        if (ride.getAvailableSeats() == 0) {
+            ride.setStatus(RideOffer.RideStatus.FULFILLED);
+            ride.setFulfilledAt(LocalDateTime.now());
+        }
+        
+        // Da wir die Entität im Persistenz-Kontext haben und keine neue save() aufrufen,
+        // wird die Änderung automatisch vom Hibernate Dirty-Checking commited.
+        
+        log.info("Sitz für Mitfahrt {} gebucht. Rest: {}", id, ride.getAvailableSeats());
+        return RideResponse.fromEntity(ride);
+    }
 
     /**
      * Decrements the available seats by 1 for the given ride.
@@ -338,11 +264,7 @@ public class RideService {
 
     /**
      * Publiziert ein {@code RideOfferedEvent} über RabbitMQ.
-     *
-     * @param ride Die angebotene Mitfahrt, über die informiert werden soll
      */
-    // --- RabbitMQ Events ---
-
     private void publishRideOfferedEvent(RideOffer ride) {
         if (!rabbitmqAvailable || rabbitTemplate == null) {
             log.warn("RabbitTemplate ist null — kann Event nicht senden. Ride gespeichert aber nicht publiziert: {}", ride.getId());
@@ -367,8 +289,6 @@ public class RideService {
 
     /**
      * Publiziert ein {@code RideCancelledEvent} über RabbitMQ.
-     *
-     * @param ride Die stornierte Mitfahrt, über die informiert werden soll
      */
     private void publishRideCancelledEvent(RideOffer ride) {
         if (!rabbitmqAvailable || rabbitTemplate == null) return;
@@ -388,8 +308,6 @@ public class RideService {
     /**
      * DTO für das {@code RideOfferedEvent}.
      */
-    // --- Event DTOs ---
-
     public static class RideOfferedEvent {
         private Long rideId;
         private String driverUsername;

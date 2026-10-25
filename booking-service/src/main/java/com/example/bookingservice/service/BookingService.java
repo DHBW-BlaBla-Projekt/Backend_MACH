@@ -99,14 +99,17 @@ public class BookingService {
             throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt. (Freie Plätze: " + remainingSeats + ")");
         }
 
-        Booking booking = new Booking(rideId, username);
-        Booking savedBooking = bookingRepository.save(booking);
+        // Versuche atomar einen Sitz zu buchen. 
+        // Falls keine Sitze mehr frei sind, schlägt dies fehl und die Buchung wird nicht erstellt. 
+        if (!rideOfferClient.tryBookSeat(rideId)) { 
+            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt."); 
+        } 
+
+        Booking booking = new Booking(rideId, username); 
+        Booking savedBooking = bookingRepository.save(booking); 
 
         log.info("Neue Buchung {} erstellt für User {}, Ride {}", 
                 savedBooking.getId(), username, rideId);
-
-        // Dekrementiere die verfügbaren Plätze im Ride-Offer-Service
-        rideOfferClient.decrementAvailableSeats(rideId);
 
         if (rabbitTemplate != null) {
             try {

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * REST-Controller für alle Mitfahrtsangebote.
@@ -40,7 +41,7 @@ public class RideController {
         List<RideResponse> rides;
 
         if (from != null && to != null) {
-            rides = rideService.searchRides(startLocation, endLocation, from, to);
+            rides = rideService.searchRidesBetween(startLocation, endLocation, from, to);
         } else if (from != null) {
             rides = rideService.searchRidesAfter(startLocation, endLocation, from);
         } else if (to != null) {
@@ -72,6 +73,19 @@ public class RideController {
 
         RideResponse created = rideService.createRide(username, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    /**
+     * Versucht atomar einen Sitzplatz zu buchen. 
+     */
+    @PatchMapping("/{id}/book")
+    public ResponseEntity<?> tryBookSeat(@PathVariable Long id) {
+        try {
+            RideResponse updated = rideService.tryBookSeat(id);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**

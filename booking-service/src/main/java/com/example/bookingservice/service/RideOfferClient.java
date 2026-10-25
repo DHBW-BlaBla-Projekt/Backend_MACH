@@ -19,13 +19,10 @@ public class RideOfferClient {
 
     private final RestTemplate restTemplate;
 
-    public RideOfferClient() {
-        this.restTemplate = new RestTemplate();
+    public RideOfferClient(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
-    /**
-     * Hole eine einzelne Mitfahrt über den Ride-Offer-Service.
-     */
     public RideInfoDto getRideById(Long rideId) {
         String url = rideOfferServiceUrl + "/api/rides/" + rideId;
         try {
@@ -40,48 +37,62 @@ public class RideOfferClient {
         }
     }
 
-    /**
-     * Dekrementiere die verfügbaren Sitze um 1 für eine gegebene Mitfahrt.
-     */
+    public boolean tryBookSeat(Long rideId) {
+        String url = rideOfferServiceUrl + "/api/rides/" + rideId + "/book";
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            
+            log.info("Sende PATCH request an: {}", url);
+            
+            ResponseEntity<?> response = restTemplate.exchange(url, HttpMethod.PATCH, entity, Void.class);
+            return response.getStatusCode() == HttpStatus.OK;
+        } catch (HttpClientErrorException.Conflict e) {
+            log.warn("Keine freien Plätze für Ride {}: {}", rideId, e.getResponseBodyAsString());
+            return false;
+        } catch (Exception e) {
+            log.error("Fehler beim Buchen der Mitfahrt {}: {}", rideId, e.getMessage());
+            throw new RuntimeException("Kann Ride-Offer-Service nicht erreichen: " + e.getMessage());
+        }
+    }
+
     public void decrementAvailableSeats(Long rideId) {
         String url = rideOfferServiceUrl + "/api/rides/" + rideId + "/decrement";
         try {
-            restTemplate.exchange(url, HttpMethod.PATCH, null, Void.class);
+            HttpHeaders headers = new HttpHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            restTemplate.exchange(url, HttpMethod.PATCH, entity, Void.class);
             log.info("Verfügbare Plätze für Mitfahrt {} dekrementiert.", rideId);
         } catch (Exception e) {
             log.error("Fehler beim Dekrementieren der verfügbaren Plätze für Ride {}: {}", rideId, e.getMessage());
         }
     }
 
-    /**
-     * Inkrementiere die verfügbaren Sitze um 1 für eine gegebene Mitfahrt (wird bei Stornierung genutzt).
-     */
     public void incrementAvailableSeats(Long rideId) {
         String url = rideOfferServiceUrl + "/api/rides/" + rideId + "/increment";
         try {
-            restTemplate.exchange(url, HttpMethod.PATCH, null, Void.class);
+            HttpHeaders headers = new HttpHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            restTemplate.exchange(url, HttpMethod.PATCH, entity, Void.class);
             log.info("Verfügbare Plätze für Mitfahrt {} inkrementiert.", rideId);
         } catch (Exception e) {
             log.error("Fehler beim Inkrementieren der verfügbaren Plätze für Ride {}: {}", rideId, e.getMessage());
         }
     }
 
-    /**
-     * Storniere eine Buchung im Ride-Offer-Service (optional).
-     */
     public void notifyRideCancelled(Long rideId) {
         String url = rideOfferServiceUrl + "/api/rides/" + rideId + "/cancel";
         try {
-            restTemplate.exchange(url, HttpMethod.PATCH, null, Void.class);
+            HttpHeaders headers = new HttpHeaders();
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            restTemplate.exchange(url, HttpMethod.PATCH, entity, Void.class);
             log.info("Ride {} storniert über Ride-Offer-Service", rideId);
         } catch (Exception e) {
             log.warn("Fehler beim Stornieren der Mitfahrt {}: {}", rideId, e.getMessage());
         }
     }
 
-    /**
-     * Hole den URL des Ride-Offer-Services.
-     */
     public String getRideOfferServiceUrl() {
         return rideOfferServiceUrl;
     }

@@ -14,15 +14,23 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByRideId(Long rideId);
 
-    List<Booking> findByPassengerUsername(String passengerUsername);
+    /**
+     * Findet Buchungen unter Berücksichtigung der Groß-/Kleinschreibung (case-insensitive).
+     */
+    @Query("SELECT b FROM Booking b WHERE LOWER(b.passengerUsername) = LOWER(:username)")
+    List<Booking> findByPassengerUsernameIgnoreCase(@Param("username") String passengerUsername);
 
     /**
-     * Gibt nur aktive Buchungen zurück.
+     * Gibt nur aktive Buchungen zurück (case-insensitive).
      */
-    @Query("SELECT b FROM Booking b WHERE b.passengerUsername = :username AND b.status = :status")
-    List<Booking> findByPassengerUsernameAndStatus(@Param("username") String username, @Param("status") Booking.BookingStatus status);
+    @Query("SELECT b FROM Booking b WHERE LOWER(b.passengerUsername) = LOWER(:username) AND b.status = :status")
+    List<Booking> findByPassengerUsernameAndStatusIgnoreCase(@Param("username") String username, @Param("status") Booking.BookingStatus status);
 
-    Optional<Booking> findByIdAndPassengerUsername(Long id, String passengerUsername);
+    /**
+     * Findet eine Buchung mit case-insensitive Username-Check.
+     */
+    @Query("SELECT b FROM Booking b WHERE b.id = :id AND LOWER(b.passengerUsername) = LOWER(:username)")
+    Optional<Booking> findByIdAndPassengerUsernameIgnoreCase(@Param("id") Long id, @Param("username") String username);
 
     boolean existsByRideIdAndStatus(Long rideId, Booking.BookingStatus status);
 }

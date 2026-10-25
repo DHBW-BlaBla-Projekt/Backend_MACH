@@ -5,12 +5,11 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "refresh_tokens")
-
-//Steichert den Refreshtoken in der DB,
 public class RefreshToken {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "refresh_token_seq")
+    @SequenceGenerator(name = "refresh_token_seq", sequenceName = "refresh_tokens_id_seq", allocationSize = 1)
     private Long id;
 
     @Column(nullable = false, unique = true)

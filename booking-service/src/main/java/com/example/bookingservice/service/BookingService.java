@@ -16,9 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Geschäftslogik-Service für Buchungen.
- */
 @Service
 public class BookingService {
 
@@ -133,8 +130,8 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookings(String username) {
-        // Nur aktive Buchungen (nicht stornierte) zurückgeben
-        return bookingRepository.findByPassengerUsernameAndStatus(username, Booking.BookingStatus.CONFIRMED)
+        // Case-insensitive Suche nach aktiven Buchungen
+        return bookingRepository.findByPassengerUsernameAndStatusIgnoreCase(username, Booking.BookingStatus.CONFIRMED)
                 .stream()
                 .map(BookingResponse::fromEntity)
                 .collect(Collectors.toList());
@@ -142,7 +139,8 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByPassenger(String username) {
-        return bookingRepository.findByPassengerUsername(username)
+        // Case-insensitive Suche nach allen Buchungen
+        return bookingRepository.findByPassengerUsernameIgnoreCase(username)
                 .stream()
                 .map(BookingResponse::fromEntity)
                 .collect(Collectors.toList());
@@ -150,7 +148,7 @@ public class BookingService {
 
     @Transactional
     public void cancelBooking(Long bookingId, String username) {
-        Booking booking = bookingRepository.findByIdAndPassengerUsername(bookingId, username)
+        Booking booking = bookingRepository.findByIdAndPassengerUsernameIgnoreCase(bookingId, username)
                 .orElseThrow(() -> new RuntimeException("Buchung nicht gefunden oder gehört nicht zu diesem Benutzer."));
 
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {

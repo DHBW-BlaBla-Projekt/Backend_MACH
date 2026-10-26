@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
-public class CreateCarRequest {
+public class CarRequest {
 
     @NotBlank(message = "Marke ist erforderlich")
     private String brand;
@@ -19,9 +19,9 @@ public class CreateCarRequest {
     @NotBlank(message = "Treibstoffart ist erforderlich")
     private String fuelType; // PETROL, DIESEL, ELECTRIC, HYBRID
 
-    public CreateCarRequest() {}
+    public CarRequest() {}
 
-    public CreateCarRequest(String brand, String model, Double averageConsumptionLPer100km, String fuelType) {
+    public CarRequest(String brand, String model, Double averageConsumptionLPer100km, String fuelType) {
         this.brand = brand;
         this.model = model;
         this.averageConsumptionLPer100km = averageConsumptionLPer100km;
@@ -29,7 +29,14 @@ public class CreateCarRequest {
     }
 
     public String getBrand() { return brand; }
+    public void setBrand(String brand) { this.brand = brand; }
+
     public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
+
     public Double getAverageConsumptionLPer100km() { return averageConsumptionLPer100km; }
+    public void setAverageConsumptionLPer100km(Double averageConsumptionLPer100km) { this.averageConsumptionLPer100km = averageConsumptionLPer100km; }
+
     public String getFuelType() { return fuelType; }
+    public void setFuelType(String fuelType) { this.fuelType = fuelType; }
 }

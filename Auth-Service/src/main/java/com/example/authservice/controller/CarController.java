@@ -1,35 +1,82 @@
-package com.example.authservice.dto;
+package com.example.authservice.controller;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
+import com.example.authservice.dto.CarRequest;
+import com.example.authservice.dto.CarResponse;
+import com.example.authservice.model.entity.Car;
+import com.example.authservice.service.CarService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
 
-public class CreateCarRequest {
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-    @NotBlank(message = "Marke ist erforderlich")
-    private String brand;
+@RestController
+@RequestMapping("/api")
+public class CarController {
 
-    @NotBlank(message = "Modell ist erforderlich")
-    private String model;
+    private final CarService carService;
 
-    @NotNull(message = "Durchschnittsverbrauch ist erforderlich")
-    @PositiveOrZero(message = "Verbrauch darf nicht negativ sein")
-    private Double averageConsumptionLPer100km;
-
-    @NotBlank(message = "Treibstoffart ist erforderlich")
-    private String fuelType; // PETROL, DIESEL, ELECTRIC, HYBRID
-
-    public CreateCarRequest() {}
-
-    public CreateCarRequest(String brand, String model, Double averageConsumptionLPer100km, String fuelType) {
-        this.brand = brand;
-        this.model = model;
-        this.averageConsumptionLPer100km = averageConsumptionLPer100km;
-        this.fuelType = fuelType;
+    public CarController(CarService carService) {
+        this.carService = carService;
     }
 
-    public String getBrand() { return brand; }
-    public String getModel() { return model; }
-    public Double getAverageConsumptionLPer100km() { return averageConsumptionLPer100km; }
-    public String getFuelType() { return fuelType; }
+    /**
+     * Erstellt oder aktualisiert das Fahrzeug des authentifizierten Users.
+     * PUT: Upsert-Verhalten (Create wenn keines existiert, sonst Update).
+     */
+    @PostMapping("/profile/car")
+    public ResponseEntity<CarResponse> createOrUpdateCar(@RequestBody CarRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        // Konvertiere die FuelType-String in das Enum
+        Car.FuelType fuelType;
+        try {
+            fuelType = Car.FuelType.valueOf(request.getFuelType().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+
+        Car car = carService.createOrUpdateCar(
+                username,
+                request.getBrand(),
+                request.getModel(),
+                request.getAverageConsumptionLPer100km(),
+                fuelType
+        );
+
+        return ResponseEntity.ok(CarResponse.fromEntity(car));
+    }
+
+    /**
+     * Liefert das Fahrzeug des authentifizierten Users.
+     */
+    @GetMapping("/profile/car")
+    public ResponseEntity<CarResponse> getCar() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        Optional<Car> car = carService.getCarForUser(username);
+        if (car.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(CarResponse.fromEntity(car.get()));
+    }
+
+    /**
+     * Liefert das Fahrzeug eines Users über die userId.
+     */
+    @GetMapping("/profile/car/{userId}")
+    public ResponseEntity<CarResponse> getCarByUserId(@PathVariable Long userId) {
+        Optional<Car> car = carService.getCarForUser(userId);
+        if (car.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(CarResponse.fromEntity(car.get()));
+    }
 }

@@ -1,5 +1,6 @@
 package com.example.rideofferservice.dto;
 
+import com.example.rideofferservice.entity.FuelType;
 import com.example.rideofferservice.entity.RideOffer;
 import java.time.LocalDateTime;
 
@@ -17,7 +18,7 @@ public class RideResponse {
     // === Phase 4.3: Neue Felder für Fahrzeugdaten ===
     private Long carId;
     private Double averageConsumptionLPer100km;
-    private String fuelType;
+    private FuelType fuelType;
 
     public RideResponse() {}
 
@@ -37,7 +38,7 @@ public class RideResponse {
     // === Phase 4.3: Konstruktur mit allen neuen Feldern ===
     public RideResponse(Long id, String driverUsername, String startLocation, String endLocation, 
                         LocalDateTime departureTime, Integer availableSeats, String additionalInfo, 
-                        RideOffer.RideStatus status, Long carId, Double averageConsumptionLPer100km, String fuelType) {
+                        RideOffer.RideStatus status, Long carId, Double averageConsumptionLPer100km, FuelType fuelType) {
         this.id = id;
         this.driverUsername = driverUsername;
         this.startLocation = startLocation;
@@ -97,6 +98,6 @@ public class RideResponse {
     public Double getAverageConsumptionLPer100km() { return averageConsumptionLPer100km; }
     public void setAverageConsumptionLPer100km(Double averageConsumptionLPer100km) { this.averageConsumptionLPer100km = averageConsumptionLPer100km; }
 
-    public String getFuelType() { return fuelType; }
-    public void setFuelType(String fuelType) { this.fuelType = fuelType; }
+    public FuelType getFuelType() { return fuelType; }
+    public void setFuelType(FuelType fuelType) { this.fuelType = fuelType; }
 }

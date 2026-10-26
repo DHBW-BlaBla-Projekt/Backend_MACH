@@ -2,6 +2,7 @@ package com.example.authservice.service;
 
 import com.example.authservice.model.entity.Car;
 import com.example.authservice.repository.CarRepository;
+import com.example.authservice.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,9 +16,11 @@ public class CarService {
     private static final Logger log = LoggerFactory.getLogger(CarService.class);
 
     private final CarRepository carRepository;
+    private final UserRepository userRepository;
 
-    public CarService(CarRepository carRepository) {
+    public CarService(CarRepository carRepository, UserRepository userRepository) {
         this.carRepository = carRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -56,11 +59,40 @@ public class CarService {
     }
 
     /**
+     * Erstellt oder aktualisiert das Fahrzeug (Upsert).
+     */
+    @Transactional
+    public Car createOrUpdateCar(String username, String brand, String model,
+                                 Double averageConsumptionLPer100km, Car.FuelType fuelType) {
+        var user = userRepository.findByUsername(username.toLowerCase())
+                .orElseThrow(() -> new IllegalArgumentException("User nicht gefunden: " + username));
+
+        Long userId = user.getId();
+
+        if (carRepository.existsByUserId(userId)) {
+            log.info("Fahrzeug für User {} existiert bereits, wird aktualisiert.", userId);
+            return updateCar(userId, brand, model, averageConsumptionLPer100km, fuelType);
+        } else {
+            log.info("Neues Fahrzeug für User {} wird erstellt.", userId);
+            return createCar(userId, brand, model, averageConsumptionLPer100km, fuelType);
+        }
+    }
+
+    /**
      * Liefert das Hauptfahrzeug eines Users.
      */
     @Transactional(readOnly = true)
     public Optional<Car> getCarForUser(Long userId) {
         return carRepository.findByUserId(userId);
+    }
+
+    /**
+     * Liefert das Hauptfahrzeug eines Users über den Username.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Car> getCarForUser(String username) {
+        return userRepository.findByUsername(username.toLowerCase())
+                .flatMap(user -> carRepository.findByUserId(user.getId()));
     }
 
     /**

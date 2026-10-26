@@ -62,7 +62,7 @@ public class RideOffer {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "fuel_type", length = 20)
-    private String fuelType;
+    private FuelType fuelType;
 
     public enum RideStatus {
         OFFERED,
@@ -123,6 +123,6 @@ public class RideOffer {
     public Double getAverageConsumptionLPer100km() { return averageConsumptionLPer100km; }
     public void setAverageConsumptionLPer100km(Double averageConsumptionLPer100km) { this.averageConsumptionLPer100km = averageConsumptionLPer100km; }
 
-    public String getFuelType() { return fuelType; }
-    public void setFuelType(String fuelType) { this.fuelType = fuelType; }
+    public FuelType getFuelType() { return fuelType; }
+    public void setFuelType(FuelType fuelType) { this.fuelType = fuelType; }
 }

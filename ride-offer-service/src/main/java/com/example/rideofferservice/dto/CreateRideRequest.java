@@ -3,6 +3,7 @@ package com.example.rideofferservice.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import com.example.rideofferservice.entity.FuelType;
 import java.time.LocalDateTime;
 
 public class CreateRideRequest {
@@ -28,7 +29,7 @@ public class CreateRideRequest {
 
     private Double averageConsumptionLPer100km;
 
-    private String fuelType;
+    private FuelType fuelType;
 
     public CreateRideRequest() {}
 
@@ -63,6 +64,6 @@ public class CreateRideRequest {
     public Double getAverageConsumptionLPer100km() { return averageConsumptionLPer100km; }
     public void setAverageConsumptionLPer100km(Double averageConsumptionLPer100km) { this.averageConsumptionLPer100km = averageConsumptionLPer100km; }
 
-    public String getFuelType() { return fuelType; }
-    public void setFuelType(String fuelType) { this.fuelType = fuelType; }
+    public FuelType getFuelType() { return fuelType; }
+    public void setFuelType(FuelType fuelType) { this.fuelType = fuelType; }
 }

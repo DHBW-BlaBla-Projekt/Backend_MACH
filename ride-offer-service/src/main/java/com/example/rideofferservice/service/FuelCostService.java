@@ -1,4 +1,5 @@
 package com.example.rideofferservice.service;
+import com.example.rideofferservice.entity.FuelType;
 
 import com.example.rideofferservice.entity.RideOffer;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ public class FuelCostService {
         if (ride.getAverageConsumptionLPer100km() == null || ride.getAverageConsumptionLPer100km() <= 0) {
             return 0.0;
         }
-        if (ride.getFuelType() == null || ride.getFuelType().isBlank()) {
+        if (ride.getFuelType() == null) {
             return 0.0;
         }
 
@@ -38,17 +39,17 @@ public class FuelCostService {
      * Liefert den aktuellen Preis pro Liter für eine bestimmte Kraftstoffart.
      * In der Produktion würde dies aus einem Cache oder einer externen API kommen.
      */
-    private double getCurrentPrice(String fuelType) {
+    private double getCurrentPrice(FuelType fuelType) {
         // TODO: Hier später die FuelPriceConfig-Logik einbauen (Phase 5.1/5.2)
         // Platzhalter-Werte (in EUR), können später über eine Config/API ersetzt werden:
-        switch (fuelType.toUpperCase()) {
-            case "PETROL":
+        switch (fuelType) {
+            case PETROL:
                 return 1.85;
-            case "DIESEL":
+            case DIESEL:
                 return 1.70;
-            case "ELECTRIC":
+            case ELECTRIC:
                 return 0.45; // pro kWh-Äquivalent in EUR
-            case "HYBRID":
+            case HYBRID:
                 return 1.75;
             default:
                 return 1.80; // Standard

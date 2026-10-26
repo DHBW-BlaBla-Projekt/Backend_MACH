@@ -149,8 +149,10 @@ public class RideService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<RideOffer> getRideById(Long id) {
-        return rideRepository.findById(id);
+    public RideResponse getRideById(Long id) {
+        RideOffer ride = rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden mit ID: " + id));
+        return RideResponse.fromEntityFull(ride);
     }
 
     /**

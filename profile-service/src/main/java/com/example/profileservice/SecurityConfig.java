@@ -76,9 +76,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Öffentliche Endpunkte — KEIN Token nötig (Health/Info)
+                        // Öffentliche Endpunkte — KEIN Token nötig (Health/Info + User-Sync vom Auth-Service)
                         .requestMatchers(
-                                "/hello"
+                                "/hello",
+                                "/api/auth/users/sync"  // Sync-Endpunkt muss öffentlich sein (Auth-Service ruft ihn auf)
                         ).permitAll()
                         // Alle anderen Endpunkte erfordern Authentifizierung
                         .anyRequest().authenticated()

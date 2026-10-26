@@ -42,7 +42,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 
                 // Override authorities with the role from the token
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + (role != null ? role : "USER")))
+                        userDetails,
+                        token,  // JWT-Token als Credential speichern – für inter-Service-Calls
+                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + (role != null ? role : "USER")))
                 );
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 

@@ -29,7 +29,7 @@ import java.util.Optional;
  * <p>Diese Endpunkte erfordern eine gültige JWT-Authentifizierung.</p>
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/profile")
 public class RatingController {
 
     private final RatingService ratingService;

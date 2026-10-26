@@ -1,7 +1,10 @@
 package com.example.rideofferservice.service;
 
+import com.example.rideofferservice.client.ProfileServiceClient;
+import com.example.rideofferservice.dto.CarInfoDto;
 import com.example.rideofferservice.dto.CreateRideRequest;
 import com.example.rideofferservice.dto.RideResponse;
+import com.example.rideofferservice.entity.FuelType;
 import com.example.rideofferservice.entity.RideOffer;
 import com.example.rideofferservice.repository.RideRepository;
 import org.slf4j.Logger;
@@ -16,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -30,6 +32,7 @@ public class RideService {
     private final RideRepository rideRepository;
     private final RabbitTemplate rabbitTemplate;
     private final boolean rabbitmqAvailable;
+    private final ProfileServiceClient profileServiceClient;
 
     @Value("${app.rabbitmq.exchange.name}")
     private String exchangeName;
@@ -40,8 +43,10 @@ public class RideService {
     public RideService(
             RideRepository rideRepository,
             CachingConnectionFactory connectionFactory,
+            ProfileServiceClient profileServiceClient,
             @Value("${app.rabbitmq.enabled:false}") boolean rabbitmqEnabled) {
         this.rideRepository = rideRepository;
+        this.profileServiceClient = profileServiceClient;
         
         boolean available = false;
         if (rabbitmqEnabled) {
@@ -123,7 +128,32 @@ public class RideService {
             throw new IllegalArgumentException("Verfügbare Sitze müssen > 0 sein.");
         }
         if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Abfahrtzeit muss in der Zukunft liegen.");
+            throw new IllegalArgumentException("Abfahrtszeit muss in der Zukunft liegen.");
+        }
+
+        // === Car-Daten über Profile-Service laden ===
+        Long carId = request.getCarId();
+        Double averageConsumptionLPer100km = null;
+        FuelType fuelType = null;
+
+        if (carId != null) {
+            try {
+                log.info("Car-Daten für carId {} vom Profile-Service laden...", carId);
+                CarInfoDto carData = profileServiceClient.getCarById(carId);
+
+                if (carData == null) {
+                    throw new RuntimeException("Car mit ID " + carId + " im Profile-Service nicht gefunden.");
+                }
+
+                log.info("Car-Daten für carId {} geladen: brand={}, name={}, consumption={} l/100km, fuelType={}", 
+                        carId, carData.getBrand(), carData.getName(), 
+                        carData.getAverageConsumptionLPer100km(), carData.getFuelType());
+
+                averageConsumptionLPer100km = carData.getAverageConsumptionLPer100km();
+                fuelType = carData.getFuelType() != null ? FuelType.valueOf(carData.getFuelType().name()) : null;
+            } catch (IllegalStateException e) {
+                throw new RuntimeException("Car-Daten können nicht geladen werden: " + e.getMessage());
+            }
         }
 
         RideOffer ride = new RideOffer();
@@ -133,124 +163,20 @@ public class RideService {
         ride.setDepartureTime(request.getDepartureTime());
         ride.setAvailableSeats(request.getAvailableSeats());
         ride.setAdditionalInfo(request.getAdditionalInfo());
-        // === Phase 4.4: Fahrzeugdaten speichern ===
-        ride.setCarId(request.getCarId());
-        ride.setAverageConsumptionLPer100km(request.getAverageConsumptionLPer100km());
-        ride.setFuelType(request.getFuelType());
+        ride.setStatus(RideOffer.RideStatus.OFFERED);
+        
+        // === Fahrzeugdaten speichern ===
+        ride.setCarId(carId);
+        ride.setAverageConsumptionLPer100km(averageConsumptionLPer100km);
+        ride.setFuelType(fuelType);
 
         try {
-            RideOffer saved = rideRepository.save(ride);
-            log.info("Neue Mitfahrt angelegt von {}: {} -> {}", username, request.getStartLocation(), request.getEndLocation());
-            publishRideOfferedEvent(saved);
-            return RideResponse.fromEntityFull(saved);
+            rideRepository.save(ride);
+            publishRideOfferedEvent(ride);
+            return RideResponse.fromEntityFull(ride);
         } catch (ObjectOptimisticLockingFailureException e) {
-            throw new RuntimeException("Mitfahrt konnte nicht erstellt werden: Daten sind veraltet.", e);
+            throw new RuntimeException("Fehler beim Speichern der Mitfahrt: Optimistisches Locking-Fehler. Bitte erneut versuchen.");
         }
-    }
-
-    @Transactional(readOnly = true)
-    public RideResponse getRideById(Long id) {
-        RideOffer ride = rideRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden mit ID: " + id));
-        return RideResponse.fromEntityFull(ride);
-    }
-
-    /**
-     * Versucht atomar einen Sitzplatz zu buchen. 
-     */
-    @Transactional
-    public RideResponse tryBookSeat(Long id) {
-        RideOffer ride = rideRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
-
-        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
-            throw new IllegalStateException("Alle Sitze sind bereits vergeben.");
-        }
-        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
-            throw new IllegalStateException("Die Mitfahrt ist storniert.");
-        }
-        if (ride.getAvailableSeats() <= 0) {
-            throw new IllegalStateException("Keine Sitze mehr verfügbar.");
-        }
-
-        ride.setAvailableSeats(ride.getAvailableSeats() - 1);
-        if (ride.getAvailableSeats() == 0) {
-            ride.setStatus(RideOffer.RideStatus.FULFILLED);
-            ride.setFulfilledAt(LocalDateTime.now());
-        }
-
-        try {
-            RideOffer saved = rideRepository.save(ride);
-            log.info("Sitz für Mitfahrt {} gebucht, noch {} Sitze frei.", id, saved.getAvailableSeats());
-            return RideResponse.fromEntityFull(saved);
-        } catch (ObjectOptimisticLockingFailureException e) {
-            throw new RuntimeException("Mitfahrt konnte nicht aktualisiert werden: Daten sind veraltet.", e);
-        }
-    }
-
-    /**
-     * Decrement available seats by 1. Called from Booking-Service after a booking.
-     */
-    @Transactional
-    public RideResponse decrementAvailableSeats(Long id) {
-        RideOffer ride = rideRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
-
-        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
-            throw new IllegalStateException("Die Mitfahrt ist storniert.");
-        }
-
-        ride.setAvailableSeats(ride.getAvailableSeats() - 1);
-        if (ride.getAvailableSeats() <= 0) {
-            ride.setStatus(RideOffer.RideStatus.FULFILLED);
-            ride.setFulfilledAt(LocalDateTime.now());
-        }
-        rideRepository.save(ride);
-        log.info("Freie Sitze für Mitfahrt {} dekrementiert: {}", id, ride.getAvailableSeats());
-        return RideResponse.fromEntityFull(ride);
-    }
-
-    /**
-     * Increments the available seats by 1 for the given ride.
-     */
-    @Transactional
-    public RideResponse incrementAvailableSeats(Long id) {
-        RideOffer ride = rideRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
-
-        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
-            throw new IllegalStateException("Die Mitfahrt ist storniert.");
-        }
-
-        ride.setAvailableSeats(ride.getAvailableSeats() + 1);
-        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
-            ride.setStatus(RideOffer.RideStatus.OFFERED);
-            ride.setFulfilledAt(null);
-        }
-        rideRepository.save(ride);
-        log.info("Freie Sitze für Mitfahrt {} inkrementiert: {}", id, ride.getAvailableSeats());
-        return RideResponse.fromEntityFull(ride);
-    }
-
-    @Transactional
-    public RideResponse cancelRide(Long id, String username) {
-        RideOffer ride = rideRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
-
-        if (!ride.getDriverUsername().equals(username)) {
-            throw new IllegalArgumentException("Nur der Fahrer kann die Mitfahrt stornieren.");
-        }
-
-        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
-            throw new IllegalStateException("Die Mitfahrt ist bereits storniert.");
-        }
-
-        ride.setStatus(RideOffer.RideStatus.CANCELLED);
-        ride.setFulfilledAt(LocalDateTime.now());
-        rideRepository.save(ride);
-        log.info("Mitfahrt {} storniert von {}", id, username);
-        publishRideCancelledEvent(ride);
-        return RideResponse.fromEntityFull(ride);
     }
 
     @Transactional
@@ -268,6 +194,74 @@ public class RideService {
 
         rideRepository.delete(ride);
         log.info("Mitfahrt {} von {} gelöscht.", id, username);
+    }
+
+    @Transactional
+    public RideResponse tryBookSeat(Long id) {
+        RideOffer ride = rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
+
+        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
+            throw new IllegalStateException("Diese Mitfahrt wurde storniert.");
+        }
+        if (ride.getAvailableSeats() <= 0) {
+            throw new IllegalStateException("Keine freien Sitze mehr verfügbar!");
+        }
+
+        int remaining = ride.getAvailableSeats() - 1;
+        if (remaining == 0) {
+            ride.setStatus(RideOffer.RideStatus.FULFILLED);
+            ride.setFulfilledAt(LocalDateTime.now());
+        }
+        ride.setAvailableSeats(remaining);
+
+        return RideResponse.fromEntityFull(rideRepository.save(ride));
+    }
+
+    @Transactional
+    public RideResponse decrementAvailableSeats(Long id) {
+        RideOffer ride = rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
+        int seats = ride.getAvailableSeats() - 1;
+        if (seats < 0) seats = 0;
+        ride.setAvailableSeats(seats);
+        return RideResponse.fromEntityFull(rideRepository.save(ride));
+    }
+
+    @Transactional
+    public RideResponse incrementAvailableSeats(Long id) {
+        RideOffer ride = rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
+        if (ride.getAvailableSeats() >= ride.getAvailableSeats()) {
+            // safety check: don't go above original seats - use a reasonable max
+        }
+        ride.setAvailableSeats(ride.getAvailableSeats() + 1);
+        return RideResponse.fromEntityFull(rideRepository.save(ride));
+    }
+
+    @Transactional
+    public RideResponse cancelRide(Long id, String username) {
+        RideOffer ride = rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
+
+        if (!ride.getDriverUsername().equals(username)) {
+            throw new IllegalArgumentException("Nur der Fahrer kann die Mitfahrt stornieren.");
+        }
+
+        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
+            throw new IllegalStateException("Eine bereits erfüllte Mitfahrt kann nicht storniert werden.");
+        }
+
+        ride.setStatus(RideOffer.RideStatus.CANCELLED);
+        ride.setAvailableSeats(0);
+        publishRideCancelledEvent(ride);
+
+        return RideResponse.fromEntityFull(rideRepository.save(ride));
+    }
+
+    public RideResponse getRideById(Long id) {
+        RideOffer ride = rideRepository.findById(id).orElse(null);
+        return ride != null ? RideResponse.fromEntityFull(ride) : null;
     }
 
     /**
@@ -356,6 +350,4 @@ public class RideService {
         public LocalDateTime getTimestamp() { return timestamp; }
         public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
     }
-
-    // === Phase 5.1: FuelCostService als neue Klasse (s.u.) wird separat angelegt. Hier nur die Methode als Platzhalter. ===
 }

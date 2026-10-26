@@ -18,6 +18,10 @@ public class CarRequest {
 
     @NotBlank(message = "Treibstoffart ist erforderlich")
     private String fuelType; // PETROL, DIESEL, ELECTRIC, HYBRID
+    
+    private String name; // Optionaler Name des Autos
+    
+    private String licensePlate; // Optionales Kennzeichen
 
     public CarRequest() {}
 
@@ -39,4 +43,10 @@ public class CarRequest {
 
     public String getFuelType() { return fuelType; }
     public void setFuelType(String fuelType) { this.fuelType = fuelType; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getLicensePlate() { return licensePlate; }
+    public void setLicensePlate(String licensePlate) { this.licensePlate = licensePlate; }
 }

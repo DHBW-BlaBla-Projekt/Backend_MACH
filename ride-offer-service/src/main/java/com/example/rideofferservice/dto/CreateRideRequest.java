@@ -3,7 +3,6 @@ package com.example.rideofferservice.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import com.example.rideofferservice.entity.FuelType;
 import java.time.LocalDateTime;
 
 public class CreateRideRequest {
@@ -23,13 +22,9 @@ public class CreateRideRequest {
 
     private String additionalInfo;
 
-    // === Phase 4.2: Neue Felder für Fahrzeugdaten ===
+    // === Nur carId: name, brand, averageConsumptionLPer100km, fuelType werden automatisch geladen ===
     @NotNull(message = "carId ist erforderlich")
     private Long carId;
-
-    private Double averageConsumptionLPer100km;
-
-    private FuelType fuelType;
 
     public CreateRideRequest() {}
 
@@ -57,13 +52,6 @@ public class CreateRideRequest {
     public String getAdditionalInfo() { return additionalInfo; }
     public void setAdditionalInfo(String additionalInfo) { this.additionalInfo = additionalInfo; }
 
-    // === Phase 4.2: Getter & Setter für die neuen Felder ===
     public Long getCarId() { return carId; }
     public void setCarId(Long carId) { this.carId = carId; }
-
-    public Double getAverageConsumptionLPer100km() { return averageConsumptionLPer100km; }
-    public void setAverageConsumptionLPer100km(Double averageConsumptionLPer100km) { this.averageConsumptionLPer100km = averageConsumptionLPer100km; }
-
-    public FuelType getFuelType() { return fuelType; }
-    public void setFuelType(FuelType fuelType) { this.fuelType = fuelType; }
 }

@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -24,37 +25,47 @@ public class CarService {
     }
 
     /**
-     * Erstellt ein neues Hauptfahrzeug für den User.
+     * Erstellt ein neues Fahrzeug für den User.
      */
     @Transactional
-    public Car createCar(Long userId, String brand, String model,
+    public Car createCar(Long userId, String name, String brand, String model, String licensePlate,
                          Double averageConsumptionLPer100km, Car.FuelType fuelType) {
-        if (carRepository.existsByUserId(userId)) {
-            throw new IllegalStateException("Der Benutzer hat bereits ein Fahrzeug hinterlegt. Bitte aktualisieren Sie dieses.");
-        }
+        Car car = new Car();
+        car.setUserId(userId);
+        car.setName(name != null ? name : (brand + " " + model));
+        car.setBrand(brand);
+        car.setModel(model);
+        car.setLicensePlate(licensePlate);
+        car.setAverageConsumptionLPer100km(averageConsumptionLPer100km);
+        car.setFuelType(fuelType);
 
-        Car car = new Car(userId, brand, model, averageConsumptionLPer100km, fuelType);
         Car savedCar = carRepository.save(car);
-        log.info("Neues Fahrzeug für User {} erstellt: {} {}", userId, brand, model);
+        log.info("Neues Fahrzeug {} für User {} erstellt.", savedCar.getId(), userId);
         return savedCar;
     }
 
     /**
-     * Aktualisiert das Hauptfahrzeug des Users.
+     * Aktualisiert ein bestehendes Fahrzeug.
      */
     @Transactional
-    public Car updateCar(Long userId, String brand, String model,
+    public Car updateCar(Long carId, Long userId, String name, String brand, String model, String licensePlate,
                          Double averageConsumptionLPer100km, Car.FuelType fuelType) {
-        Car existing = carRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalStateException("Kein Fahrzeug für User " + userId + " gefunden."));
+        Car existing = carRepository.findById(carId)
+                .orElseThrow(() -> new IllegalArgumentException("Fahrzeug nicht gefunden: " + carId));
 
-        existing.setBrand(brand);
-        existing.setModel(model);
-        existing.setAverageConsumptionLPer100km(averageConsumptionLPer100km);
-        existing.setFuelType(fuelType);
+        if (!existing.getUserId().equals(userId)) {
+            throw new IllegalStateException("Du darfst nur deine eigenen Fahrzeuge bearbeiten.");
+        }
+
+        if (name != null) existing.setName(name);
+        if (brand != null) existing.setBrand(brand);
+        if (model != null) existing.setModel(model);
+        if (licensePlate != null) existing.setLicensePlate(licensePlate);
+        if (averageConsumptionLPer100km != null) existing.setAverageConsumptionLPer100km(averageConsumptionLPer100km);
+        if (fuelType != null) existing.setFuelType(fuelType);
 
         Car updatedCar = carRepository.save(existing);
-        log.info("Fahrzeug für User {} aktualisiert: {} {}", userId, brand, model);
+        log.info("Fahrzeug {} für User {} aktualisiert.", carId, userId);
         return updatedCar;
     }
 
@@ -71,32 +82,72 @@ public class CarService {
 
         if (carRepository.existsByUserId(userId)) {
             log.info("Fahrzeug für User {} existiert bereits, wird aktualisiert.", userId);
-            return updateCar(userId, brand, model, averageConsumptionLPer100km, fuelType);
+            return updateCarForExisting(userId, brand, model, averageConsumptionLPer100km, fuelType);
         } else {
             log.info("Neues Fahrzeug für User {} wird erstellt.", userId);
-            return createCar(userId, brand, model, averageConsumptionLPer100km, fuelType);
+            return createCar(userId, brand + " " + model, brand, model, null, averageConsumptionLPer100km, fuelType);
+        }
+    }
+
+    private Car updateCarForExisting(Long userId, String brand, String model, Double avg, Car.FuelType fuelType) {
+        // Da wir jetzt mehrere Autos haben können, suchen wir das erste für diesen User oder erstellen eins neu
+        // Wir nutzen hier einfach eine neue Methode, die auf die alte Logik (Upsert) zurückgreift 
+        // oder einfach ein neues erstellt. Für die Migration zu mehreren Autos: immer createCar aufrufen?
+        // Der Controller nutzt diese Methode aktuell für den alten "ein Auto"-Fall. 
+        // Wir ändern das Verhalten hier: Wenn es bereits existiert, updaten wir es (wie bisher).
+        List<Car> cars = carRepository.findByUserId(userId);
+        if (!cars.isEmpty()) {
+            Car existing = cars.get(0);
+            existing.setBrand(brand);
+            existing.setModel(model);
+            existing.setAverageConsumptionLPer100km(avg);
+            existing.setFuelType(fuelType);
+            return carRepository.save(existing);
+        } else {
+            return createCar(userId, brand + " " + model, brand, model, null, avg, fuelType);
         }
     }
 
     /**
-     * Liefert das Hauptfahrzeug eines Users.
+     * Liefert alle Fahrzeuge eines Users.
      */
     @Transactional(readOnly = true)
-    public Optional<Car> getCarForUser(Long userId) {
+    public List<Car> getAllCarsForUser(Long userId) {
         return carRepository.findByUserId(userId);
     }
 
     /**
-     * Liefert das Hauptfahrzeug eines Users über den Username.
+     * Liefert alle Fahrzeuge eines Users über den Username.
      */
     @Transactional(readOnly = true)
-    public Optional<Car> getCarForUser(String username) {
-        return userRepository.findByUsername(username.toLowerCase())
-                .flatMap(user -> carRepository.findByUserId(user.getId()));
+    public List<Car> getAllCarsByUsername(String username) {
+        var user = userRepository.findByUsername(username.toLowerCase())
+                .orElseThrow(() -> new IllegalArgumentException("User nicht gefunden: " + username));
+        return carRepository.findByUserId(user.getId());
     }
 
     /**
-     * Liefert ein Fahrzeug über seine ID (nützlich für den ride-offer-service).
+     * Liefert alle Fahrzeuge eines Users über den Username (für Legacy).
+     */
+    @Transactional(readOnly = true)
+    public Optional<Car> getCarForUser(String username) {
+        var user = userRepository.findByUsername(username.toLowerCase())
+                .orElseThrow(() -> new IllegalArgumentException("User nicht gefunden: " + username));
+        List<Car> cars = carRepository.findByUserId(user.getId());
+        return cars.isEmpty() ? Optional.empty() : Optional.of(cars.get(0));
+    }
+
+    /**
+     * Liefert alle Fahrzeuge eines Users über die userId (für Legacy).
+     */
+    @Transactional(readOnly = true)
+    public Optional<Car> getCarForUser(Long userId) {
+        List<Car> cars = carRepository.findByUserId(userId);
+        return cars.isEmpty() ? Optional.empty() : Optional.of(cars.get(0));
+    }
+
+    /**
+     * Liefert ein Fahrzeug über seine ID.
      */
     @Transactional(readOnly = true)
     public Optional<Car> getCarById(Long carId) {

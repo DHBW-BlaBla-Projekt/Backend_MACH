@@ -22,6 +22,10 @@ public class CreateRideRequest {
 
     private String additionalInfo;
 
+    // === Nur carId: name, brand, averageConsumptionLPer100km, fuelType werden automatisch geladen ===
+    @NotNull(message = "carId ist erforderlich")
+    private Long carId;
+
     public CreateRideRequest() {}
 
     public CreateRideRequest(String startLocation, String endLocation, LocalDateTime departureTime, 
@@ -47,4 +51,7 @@ public class CreateRideRequest {
 
     public String getAdditionalInfo() { return additionalInfo; }
     public void setAdditionalInfo(String additionalInfo) { this.additionalInfo = additionalInfo; }
+
+    public Long getCarId() { return carId; }
+    public void setCarId(Long carId) { this.carId = carId; }
 }

@@ -1,9 +1,9 @@
-package com.example.authservice.service;
+package com.example.profileservice.service;
 
-import com.example.authservice.dto.RatingRequest;
-import com.example.authservice.dto.RatingResponse;
-import com.example.authservice.model.entity.Rating;
-import com.example.authservice.repository.RatingRepository;
+import com.example.profileservice.dto.RatingRequest;
+import com.example.profileservice.dto.RatingResponse;
+import com.example.profileservice.model.entity.Rating;
+import com.example.profileservice.repository.RatingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

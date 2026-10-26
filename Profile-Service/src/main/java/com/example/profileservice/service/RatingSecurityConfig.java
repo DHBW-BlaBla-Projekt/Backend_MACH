@@ -1,4 +1,4 @@
-package com.example.authservice.service;
+package com.example.profileservice.service;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;

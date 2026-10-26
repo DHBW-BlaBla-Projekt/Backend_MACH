@@ -1,6 +1,6 @@
-package com.example.authservice.repository;
+package com.example.profileservice.repository;
 
-import com.example.authservice.model.entity.Rating;
+import com.example.profileservice.model.entity.Rating;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;

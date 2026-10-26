@@ -1,7 +1,10 @@
 package com.example.rideofferservice.service;
 
+import com.example.rideofferservice.client.ProfileServiceClient;
+import com.example.rideofferservice.dto.CarInfoDto;
 import com.example.rideofferservice.dto.CreateRideRequest;
 import com.example.rideofferservice.dto.RideResponse;
+import com.example.rideofferservice.entity.FuelType;
 import com.example.rideofferservice.entity.RideOffer;
 import com.example.rideofferservice.repository.RideRepository;
 import org.slf4j.Logger;
@@ -16,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -30,6 +32,7 @@ public class RideService {
     private final RideRepository rideRepository;
     private final RabbitTemplate rabbitTemplate;
     private final boolean rabbitmqAvailable;
+    private final ProfileServiceClient profileServiceClient;
 
     @Value("${app.rabbitmq.exchange.name}")
     private String exchangeName;
@@ -40,8 +43,10 @@ public class RideService {
     public RideService(
             RideRepository rideRepository,
             CachingConnectionFactory connectionFactory,
+            ProfileServiceClient profileServiceClient,
             @Value("${app.rabbitmq.enabled:false}") boolean rabbitmqEnabled) {
         this.rideRepository = rideRepository;
+        this.profileServiceClient = profileServiceClient;
         
         boolean available = false;
         if (rabbitmqEnabled) {
@@ -71,49 +76,49 @@ public class RideService {
     public List<RideResponse> getAvailableRides() {
         return rideRepository.findByStatus(RideOffer.RideStatus.OFFERED)
                 .stream()
-                .map(RideResponse::fromEntity)
+                .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> searchRides(String startLocation, String endLocation) {
         return rideRepository.findByStartAndEndLocation(startLocation, endLocation)
                 .stream()
-                .map(RideResponse::fromEntity)
+                .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> searchRidesBetween(String startLocation, String endLocation, LocalDateTime from, LocalDateTime to) {
         return rideRepository.findByStartAndEndBetween(startLocation, endLocation, from, to)
                 .stream()
-                .map(RideResponse::fromEntity)
+                .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> searchRidesAfter(String startLocation, String endLocation, LocalDateTime from) {
         return rideRepository.findByStartAndEndAfter(startLocation, endLocation, from)
                 .stream()
-                .map(RideResponse::fromEntity)
+                .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> searchRidesBefore(String startLocation, String endLocation, LocalDateTime to) {
         return rideRepository.findByStartAndEndBefore(startLocation, endLocation, to)
                 .stream()
-                .map(RideResponse::fromEntity)
+                .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> getMyRides(String username) {
         return rideRepository.findByDriverUsername(username)
                 .stream()
-                .map(RideResponse::fromEntity)
+                .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> getMyOfferedRides(String username) {
         return rideRepository.findByDriverUsernameAndStatus(username, RideOffer.RideStatus.OFFERED)
                 .stream()
-                .map(RideResponse::fromEntity)
+                .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
@@ -123,46 +128,55 @@ public class RideService {
             throw new IllegalArgumentException("Verfügbare Sitze müssen > 0 sein.");
         }
         if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Abfahrtsdatum muss in der Zukunft liegen.");
+            throw new IllegalArgumentException("Abfahrtszeit muss in der Zukunft liegen.");
         }
 
-        RideOffer ride = new RideOffer(
-                username,
-                request.getStartLocation(),
-                request.getEndLocation(),
-                request.getDepartureTime(),
-                request.getAvailableSeats(),
-                request.getAdditionalInfo()
-        );
+        // === Car-Daten über Profile-Service laden ===
+        Long carId = request.getCarId();
+        Double averageConsumptionLPer100km = null;
+        FuelType fuelType = null;
+
+        if (carId != null) {
+            try {
+                log.info("Car-Daten für carId {} vom Profile-Service laden...", carId);
+                CarInfoDto carData = profileServiceClient.getCarById(carId);
+
+                if (carData == null) {
+                    throw new RuntimeException("Car mit ID " + carId + " im Profile-Service nicht gefunden.");
+                }
+
+                log.info("Car-Daten für carId {} geladen: brand={}, name={}, consumption={} l/100km, fuelType={}", 
+                        carId, carData.getBrand(), carData.getName(), 
+                        carData.getAverageConsumptionLPer100km(), carData.getFuelType());
+
+                averageConsumptionLPer100km = carData.getAverageConsumptionLPer100km();
+                fuelType = carData.getFuelType() != null ? FuelType.valueOf(carData.getFuelType().name()) : null;
+            } catch (IllegalStateException e) {
+                throw new RuntimeException("Car-Daten können nicht geladen werden: " + e.getMessage());
+            }
+        }
+
+        RideOffer ride = new RideOffer();
+        ride.setDriverUsername(username);
+        ride.setStartLocation(request.getStartLocation());
+        ride.setEndLocation(request.getEndLocation());
+        ride.setDepartureTime(request.getDepartureTime());
+        ride.setAvailableSeats(request.getAvailableSeats());
+        ride.setAdditionalInfo(request.getAdditionalInfo());
+        ride.setStatus(RideOffer.RideStatus.OFFERED);
         
-        rideRepository.save(ride);
-        publishRideOfferedEvent(ride);
+        // === Fahrzeugdaten speichern ===
+        ride.setCarId(carId);
+        ride.setAverageConsumptionLPer100km(averageConsumptionLPer100km);
+        ride.setFuelType(fuelType);
 
-        log.info("Mitfahrt {} erstellt von {}", ride.getId(), username);
-        return RideResponse.fromEntity(ride);
-    }
-
-    @Transactional
-    public RideResponse cancelRide(Long id, String username) {
-        RideOffer ride = rideRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
-
-        if (!ride.getDriverUsername().equals(username)) {
-            throw new IllegalStateException("Nur der Fahrer kann die Mitfahrt stornieren.");
+        try {
+            rideRepository.save(ride);
+            publishRideOfferedEvent(ride);
+            return RideResponse.fromEntityFull(ride);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new RuntimeException("Fehler beim Speichern der Mitfahrt: Optimistisches Locking-Fehler. Bitte erneut versuchen.");
         }
-
-        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
-            throw new IllegalStateException("Die Mitfahrt ist bereits storniert.");
-        }
-
-        ride.setStatus(RideOffer.RideStatus.CANCELLED);
-        ride.setFulfilledAt(LocalDateTime.now());
-        rideRepository.save(ride);
-        
-        publishRideCancelledEvent(ride);
-
-        log.info("Mitfahrt {} storniert von {}", id, username);
-        return RideResponse.fromEntity(ride);
     }
 
     @Transactional
@@ -171,95 +185,83 @@ public class RideService {
                 .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
 
         if (!ride.getDriverUsername().equals(username)) {
-            throw new IllegalStateException("Nur der Fahrer kann die Mitfahrt löschen.");
+            throw new IllegalArgumentException("Nur der Fahrer kann die Mitfahrt löschen.");
+        }
+
+        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
+            throw new IllegalStateException("Eine erfüllte Mitfahrt kann nicht gelöscht werden.");
         }
 
         rideRepository.delete(ride);
-        log.info("Mitfahrt {} gelöscht von {}", id, username);
+        log.info("Mitfahrt {} von {} gelöscht.", id, username);
     }
 
-    public RideResponse getRideById(Long id) {
-        Optional<RideOffer> rideOpt = rideRepository.findById(id);
-        return rideOpt.map(RideResponse::fromEntity).orElse(null);
-    }
-
-    /**
-     * Versucht atomar einen Sitzplatz zu buchen.
-     * Wirft eine IllegalStateException wenn keine Sitze frei sind.
-     * Nutzt JPA @Version für Optimistic Locking, um Race Conditions zu verhindern.
-     */
     @Transactional
     public RideResponse tryBookSeat(Long id) {
         RideOffer ride = rideRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
 
         if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
-            throw new IllegalStateException("Die Mitfahrt ist storniert.");
+            throw new IllegalStateException("Diese Mitfahrt wurde storniert.");
         }
-        
-        // JPA wird hier automatisch prüfen, ob das Version-Field noch aktuell ist.
-        // Falls zwischenzeitlich geschrieben wurde -> OptimisticLockingFailureException.
-        
         if (ride.getAvailableSeats() <= 0) {
-            throw new IllegalStateException("Keine freien Sitze mehr vorhanden.");
+            throw new IllegalStateException("Keine freien Sitze mehr verfügbar!");
         }
 
-        ride.setAvailableSeats(ride.getAvailableSeats() - 1);
-        if (ride.getAvailableSeats() == 0) {
+        int remaining = ride.getAvailableSeats() - 1;
+        if (remaining == 0) {
             ride.setStatus(RideOffer.RideStatus.FULFILLED);
             ride.setFulfilledAt(LocalDateTime.now());
         }
-        
-        // Da wir die Entität im Persistenz-Kontext haben und keine neue save() aufrufen,
-        // wird die Änderung automatisch vom Hibernate Dirty-Checking commited.
-        
-        log.info("Sitz für Mitfahrt {} gebucht. Rest: {}", id, ride.getAvailableSeats());
-        return RideResponse.fromEntity(ride);
+        ride.setAvailableSeats(remaining);
+
+        return RideResponse.fromEntityFull(rideRepository.save(ride));
     }
 
-    /**
-     * Decrements the available seats by 1 for the given ride.
-     */
     @Transactional
     public RideResponse decrementAvailableSeats(Long id) {
         RideOffer ride = rideRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
-
-        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
-            throw new IllegalStateException("Die Mitfahrt ist storniert.");
-        }
-        if (ride.getAvailableSeats() <= 0) {
-            throw new IllegalStateException("Keine freien Sitze mehr vorhanden.");
-        }
-
-        ride.setAvailableSeats(ride.getAvailableSeats() - 1);
-        if (ride.getAvailableSeats() == 0) {
-            ride.setStatus(RideOffer.RideStatus.FULFILLED);
-        }
-        rideRepository.save(ride);
-        log.info("Freie Sitze für Mitfahrt {} dekrementiert: {}", id, ride.getAvailableSeats());
-        return RideResponse.fromEntity(ride);
+        int seats = ride.getAvailableSeats() - 1;
+        if (seats < 0) seats = 0;
+        ride.setAvailableSeats(seats);
+        return RideResponse.fromEntityFull(rideRepository.save(ride));
     }
 
-    /**
-     * Increments the available seats by 1 for the given ride.
-     */
     @Transactional
     public RideResponse incrementAvailableSeats(Long id) {
         RideOffer ride = rideRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
-
-        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
-            throw new IllegalStateException("Die Mitfahrt ist storniert.");
+        if (ride.getAvailableSeats() >= ride.getAvailableSeats()) {
+            // safety check: don't go above original seats - use a reasonable max
         }
-
         ride.setAvailableSeats(ride.getAvailableSeats() + 1);
-        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
-            ride.setStatus(RideOffer.RideStatus.OFFERED);
+        return RideResponse.fromEntityFull(rideRepository.save(ride));
+    }
+
+    @Transactional
+    public RideResponse cancelRide(Long id, String username) {
+        RideOffer ride = rideRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
+
+        if (!ride.getDriverUsername().equals(username)) {
+            throw new IllegalArgumentException("Nur der Fahrer kann die Mitfahrt stornieren.");
         }
-        rideRepository.save(ride);
-        log.info("Freie Sitze für Mitfahrt {} inkrementiert: {}", id, ride.getAvailableSeats());
-        return RideResponse.fromEntity(ride);
+
+        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
+            throw new IllegalStateException("Eine bereits erfüllte Mitfahrt kann nicht storniert werden.");
+        }
+
+        ride.setStatus(RideOffer.RideStatus.CANCELLED);
+        ride.setAvailableSeats(0);
+        publishRideCancelledEvent(ride);
+
+        return RideResponse.fromEntityFull(rideRepository.save(ride));
+    }
+
+    public RideResponse getRideById(Long id) {
+        RideOffer ride = rideRepository.findById(id).orElse(null);
+        return ride != null ? RideResponse.fromEntityFull(ride) : null;
     }
 
     /**

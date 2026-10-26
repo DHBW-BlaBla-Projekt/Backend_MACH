@@ -1,4 +1,4 @@
-package com.example.authservice.dto;
+package com.example.profileservice.dto;
 
 /**
  * Request DTO für das Erstellen einer neuen Bewertung.

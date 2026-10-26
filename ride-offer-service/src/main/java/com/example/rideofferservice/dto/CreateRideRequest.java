@@ -22,6 +22,14 @@ public class CreateRideRequest {
 
     private String additionalInfo;
 
+    // === Phase 4.2: Neue Felder für Fahrzeugdaten ===
+    @NotNull(message = "carId ist erforderlich")
+    private Long carId;
+
+    private Double averageConsumptionLPer100km;
+
+    private String fuelType;
+
     public CreateRideRequest() {}
 
     public CreateRideRequest(String startLocation, String endLocation, LocalDateTime departureTime, 
@@ -47,4 +55,14 @@ public class CreateRideRequest {
 
     public String getAdditionalInfo() { return additionalInfo; }
     public void setAdditionalInfo(String additionalInfo) { this.additionalInfo = additionalInfo; }
+
+    // === Phase 4.2: Getter & Setter für die neuen Felder ===
+    public Long getCarId() { return carId; }
+    public void setCarId(Long carId) { this.carId = carId; }
+
+    public Double getAverageConsumptionLPer100km() { return averageConsumptionLPer100km; }
+    public void setAverageConsumptionLPer100km(Double averageConsumptionLPer100km) { this.averageConsumptionLPer100km = averageConsumptionLPer100km; }
+
+    public String getFuelType() { return fuelType; }
+    public void setFuelType(String fuelType) { this.fuelType = fuelType; }
 }

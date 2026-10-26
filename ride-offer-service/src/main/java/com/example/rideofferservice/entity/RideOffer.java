@@ -53,6 +53,17 @@ public class RideOffer {
     @Column(name = "fulfilled_at")
     private LocalDateTime fulfilledAt;
 
+    // === Phase 4.1: Neue Felder für Fahrzeugdaten ===
+    @Column(name = "car_id")
+    private Long carId;
+
+    @Column(name = "average_consumption_l_per_100km")
+    private Double averageConsumptionLPer100km;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "fuel_type", length = 20)
+    private String fuelType;
+
     public enum RideStatus {
         OFFERED,
         FULFILLED,
@@ -104,4 +115,14 @@ public class RideOffer {
 
     public LocalDateTime getFulfilledAt() { return fulfilledAt; }
     public void setFulfilledAt(LocalDateTime fulfilledAt) { this.fulfilledAt = fulfilledAt; }
+
+    // === Phase 4.1: Getter & Setter für die neuen Felder ===
+    public Long getCarId() { return carId; }
+    public void setCarId(Long carId) { this.carId = carId; }
+
+    public Double getAverageConsumptionLPer100km() { return averageConsumptionLPer100km; }
+    public void setAverageConsumptionLPer100km(Double averageConsumptionLPer100km) { this.averageConsumptionLPer100km = averageConsumptionLPer100km; }
+
+    public String getFuelType() { return fuelType; }
+    public void setFuelType(String fuelType) { this.fuelType = fuelType; }
 }

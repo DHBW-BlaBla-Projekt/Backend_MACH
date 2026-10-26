@@ -1,6 +1,6 @@
-package com.example.authservice.dto;
+package com.example.profileservice.dto;
 
-import com.example.authservice.model.entity.Car;
+import com.example.profileservice.model.entity.Car;
 
 public class CarResponse {
 

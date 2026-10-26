@@ -1,6 +1,6 @@
-package com.example.authservice.repository;
+package com.example.profileservice.repository;
 
-import com.example.authservice.model.entity.Car;
+import com.example.profileservice.model.entity.Car;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

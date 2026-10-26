@@ -1,9 +1,9 @@
-package com.example.authservice.controller;
+package com.example.profileservice.controller;
 
-import com.example.authservice.dto.CarRequest;
-import com.example.authservice.dto.CarResponse;
-import com.example.authservice.model.entity.Car;
-import com.example.authservice.service.CarService;
+import com.example.profileservice.dto.CarRequest;
+import com.example.profileservice.dto.CarResponse;
+import com.example.profileservice.model.entity.Car;
+import com.example.profileservice.service.CarService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

@@ -1,4 +1,4 @@
-package com.example.authservice.model.entity;
+package com.example.profileservice.model.entity;
 
 import jakarta.persistence.*;
 import java.util.Objects;

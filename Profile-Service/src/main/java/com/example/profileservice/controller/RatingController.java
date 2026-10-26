@@ -1,10 +1,10 @@
-package com.example.authservice.controller;
+package com.example.profileservice.controller;
 
-import com.example.authservice.dto.RatingRequest;
-import com.example.authservice.dto.RatingResponse;
-import com.example.authservice.model.entity.User;
-import com.example.authservice.repository.UserRepository;
-import com.example.authservice.service.RatingService;
+import com.example.profileservice.dto.RatingRequest;
+import com.example.profileservice.dto.RatingResponse;
+import com.example.profileservice.model.entity.User;
+import com.example.profileservice.repository.UserRepository;
+import com.example.profileservice.service.RatingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

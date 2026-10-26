@@ -1,8 +1,8 @@
-package com.example.authservice.service;
+package com.example.profileservice.service;
 
-import com.example.authservice.model.entity.Car;
-import com.example.authservice.repository.CarRepository;
-import com.example.authservice.repository.UserRepository;
+import com.example.profileservice.model.entity.Car;
+import com.example.profileservice.repository.CarRepository;
+import com.example.profileservice.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

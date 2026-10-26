@@ -3,6 +3,7 @@ package com.example.authservice.controller;
 import com.example.authservice.auth.JwtTokenProvider;
 import com.example.authservice.auth.dto.JwtResponse;
 import com.example.authservice.auth.dto.LoginRequest;
+import com.example.authservice.client.ProfileServiceClient;
 import com.example.authservice.model.entity.RefreshToken;
 import com.example.authservice.model.entity.User;
 import com.example.authservice.repository.UserRepository;
@@ -20,18 +21,6 @@ import java.util.Map;
  *
  * <p>Dient der Benutzerregistrierung, dem Login mit JWT-Token-Ausstellung,
  * dem Refresh von Tokens sowie dem Logout.</p>
- *
- * <h2>Verwendete Endpunkte:</h2>
- * <ul>
- *   <li>{@code POST /api/auth/register} – Öffentlicher Endpunkt zur Registrierung eines neuen Benutzers</li>
- *   <li>{@code POST /api/auth/login} – Öffentlicher Endpunkt zum Login und Token-Bezug</li>
- *   <li>{@code POST /api/auth/refresh-token} – Geschützter Endpunkt zum Erneuern des Access-Tokens</li>
- *   <li>{@code POST /api/auth/logout} – Geschützter Endpunkt zum Widerrufen der Refresh-Tokens</li>
- * </ul>
- *
- * @see com.example.authservice.auth.JwtTokenProvider
- * @see com.example.authservice.service.RefreshTokenService
- * @see com.example.authservice.service.CustomUserDetailsService
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -42,37 +31,29 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
     private final com.example.authservice.service.RefreshTokenService refreshTokenService;
+    private final ProfileServiceClient profileServiceClient;
 
     /**
      * Konstruktor mit Dependency Injection.
-     *
-     * @param userRepository         Repository zur Benutzerdatenverwaltung
-     * @param passwordEncoder        PasswordEncoder für die Hashing-Funktionalität
-     * @param authenticationManager  AuthenticationManager der Spring Security Frameworks
-     * @param tokenProvider          JWT Token Provider zur Erstellung und Validierung von Tokens
-     * @param refreshTokenService    Service zur Verwaltung der Refresh-Tokens
      */
     public AuthController(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
             JwtTokenProvider tokenProvider,
-            com.example.authservice.service.RefreshTokenService refreshTokenService) {
+            com.example.authservice.service.RefreshTokenService refreshTokenService,
+            ProfileServiceClient profileServiceClient) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.tokenProvider = tokenProvider;
         this.refreshTokenService = refreshTokenService;
+        this.profileServiceClient = profileServiceClient;
     }
 
 
     /**
      * Öffentlicher Endpunkt: Registriert einen neuen Benutzer im System.
-     *
-     * <p>Validiert, dass der Username eindeutig ist und das Passwort den Sicherheitsanforderungen entspricht.</p>
-     *
-     * @param request DTO mit {@code username} und {@code password} des neuen Benutzers
-     * @return ResponseEntity mit Statuscode 201 (CREATED) bei Erfolg oder 400 (BAD_REQUEST) bei Validierungsfehlern
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
@@ -103,6 +84,15 @@ public class AuthController {
         user.setRole("USER");  // Immer USER
 
         userRepository.save(user);
+
+        // Synchronisiere den User sofort mit dem Profile-Service
+        try {
+            profileServiceClient.syncUser(user.getUsername(), request.getPassword(), user.getRole());
+        } catch (Exception e) {
+            // Sync-Fehler sind nicht kritisch – der Login funktioniert trotzdem
+            // wird im Client geloggt
+        }
+
         return ResponseEntity.ok(Map.of(
                 "statusCode", 201,
                 "message", "User erfolgreich registriert!"));
@@ -111,12 +101,6 @@ public class AuthController {
 
     /**
      * Öffentlicher Endpunkt: Login eines Benutzers mit Username und Passwort.
-     *
-     * <p>Authentifiziert den Benutzer über den AuthenticationManager und gibt
-     * bei Erfolg ein AccessToken sowie einen RefreshToken zurück.</p>
-     *
-     * @param request DTO mit {@code username} und {@code password} zum Login
-     * @return ResponseEntity mit {@link JwtResponse} bei Erfolg oder 401 (UNAUTHORIZED) bei ungültigen Zugangsdaten
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
@@ -131,6 +115,14 @@ public class AuthController {
         }
 
         User user = userRepository.findByUsername(request.getUsername()).orElseThrow();
+        
+        // Stelle sicher, dass der User im Profile-Service existiert (on-demand sync)
+        try {
+            profileServiceClient.syncUser(user.getUsername(), "", user.getRole());
+        } catch (Exception e) {
+            // Sync-Fehler sind nicht kritisch für den Login
+        }
+
         String accessToken = tokenProvider.generateAccessToken(user.getUsername(), user.getRole());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
@@ -146,13 +138,7 @@ public class AuthController {
 
     /**
      * Geschützter Endpunkt: Erneuert den AccessToken mit einem gültigen Refresh-Token.
-     *
-     * <p>Überprüft den Authorization-Header und validiert das angeforderte Refresh-Token.</p>
-     *
-     * @param authHeader Authorization-Header im Format "Bearer &lt;refresh-token&gt;"
-     * @return ResponseEntity mit einem neuen AccessToken bei Erfolg oder 401 (UNAUTHORIZED) bei ungültigem Token
      */
-    //Geschützer Endpoint: Token refresh ohne Login
     @PostMapping("/refresh-token")
     public ResponseEntity<?> refreshToken(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -183,11 +169,7 @@ public class AuthController {
 
     /**
      * Geschützter Endpunkt: Logout – widerruft das aktuelle Refresh-Token.
-     *
-     * @param authHeader Authorization-Header im Format "Bearer &lt;refresh-token&gt;"
-     * @return ResponseEntity mit Statuscode 200 (OK) bei Erfolg oder 401 (UNAUTHORIZED) bei ungültigem Header
      */
-    //Geschützter Endpoint: Logout, widerruft den Refresh-Token
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -210,13 +192,23 @@ public class AuthController {
     public static class RegisterRequest {
         private String username;
         private String password;
-        private String role;
 
         public String getUsername() { return username; }
         public void setUsername(String username) { this.username = username; }
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
-        public String getRole() { return role; }
-        public void setRole(String role) { this.role = role; }
+    }
+
+    /**
+     * DTO für Login-Anfragen.
+     */
+    public static class LoginRequest {
+        private String username;
+        private String password;
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
     }
 }

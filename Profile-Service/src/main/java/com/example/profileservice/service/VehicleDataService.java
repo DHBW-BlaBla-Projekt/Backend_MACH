@@ -72,3 +72,43 @@ public class VehicleDataService {
 
 
 }
+
+@Service
+public class VehicleDataService {
+    private static final int MIN_YEAR = 1984;
+    private static final int MAX_YEAR = 2030;
+
+    public List<VehicleMenuItemDto> getMakes(Integer year) {
+        validateYear(year);
+
+        // Erst dann Chache prüfen / API aufrufen
+        return loadMakesFromCacheOrApi(year)
+    }
+
+    public List<VehicleMenuItemDto> getModels(Integer year, String make) {
+        validateYear(year);
+        String validatedMake = validateText(make, "Marke", 100);
+        
+        return loadModelsFromCacheOrApi(year, validatedMake)
+    }
+
+    public List<VehicleOptionDto> getOptions(
+        Integer year,
+        String make,
+        String model) {
+
+        validateYear(year);
+        String validatedMake = validateText(make, "Marke", 100);
+        String validatedModel = validateText(model, "Modell", 150);
+            
+        return loadOptionsFromCacheOrApi(year, validatedMake, validatedModel)
+    }
+
+    public VehicleDetailsDto getVehicleDetails(Long vehicleId) {
+        if(vehicleId == null ||vehicleId < 0) {
+            throw new IllegalArgumentException ("Die Vehicle ID muss eine positive Zahl sein!");
+        }
+
+        return loadVehicleDetailsFromCacheOrApi(vehicleId)
+    }
+}

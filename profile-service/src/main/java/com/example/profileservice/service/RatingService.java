@@ -50,10 +50,10 @@ public class RatingService {
             throw new IllegalArgumentException("Bewertung muss zwischen 1 und 5 sein.");
         }
 
-        // 2. Validierung: Bewertung darf nur einmal pro Pair existieren
-        ratingRepository.findByPassengerUsernameAndDriverUsername(passengerUsername, request.getDriverUsername())
+        // 2. Validierung: Bewertung darf nur einmal pro Fahrt existieren
+        ratingRepository.findByPassengerUsernameAndRideId(passengerUsername, request.getRideId())
                 .ifPresent(existing -> {
-                    throw new IllegalStateException("Du hast diesen Fahrer bereits bewertet!");
+                    throw new IllegalStateException("Du hast diese Fahrt bereits bewertet!");
                 });
 
         // 3. Validierung: Buchung muss existieren und abgeschlossen sein (über Booking-Service prüfen)

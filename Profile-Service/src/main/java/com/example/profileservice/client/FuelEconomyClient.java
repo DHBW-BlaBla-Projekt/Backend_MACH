@@ -1,15 +1,35 @@
+package com.example.profileservice.client;
+
+import com.example.profileservice.dto.VehicleDetailsDto;
+import com.example.profileservice.dto.VehicleMenuItemDto;
+import com.example.profileservice.dto.VehicleOptionDto;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
 public class FuelEconomyClient {
-    
-    List<VehicleMenuItemDto> getYears();
 
-    List<VehicleMenuItemDto> getMakes(int year);
+    public List<VehicleMenuItemDto> getYears() {
+        throw new UnsupportedOperationException("Noch nicht implementiert.");
+    }
 
-    List<VehicleMenuItemDto> getModels(int year, String make);
+    public List<VehicleMenuItemDto> getMakes(int year) {
+        throw new UnsupportedOperationException("Noch nicht implementiert.");
+    }
 
-    List<VehicleOptionDto> getOptions(int year, String make, String model);
+    public List<VehicleMenuItemDto> getModels(int year, String make) {
+        throw new UnsupportedOperationException("Noch nicht implementiert.");
+    }
 
-    VehicleDetailsDto getVehicleDetails(long vehicleId);
+    public List<VehicleOptionDto> getOptions(
+            int year,
+            String make,
+            String model) {
+        throw new UnsupportedOperationException("Noch nicht implementiert.");
+    }
 
-    app.fueleconomy.base-url=https://www.fueleconomy.gov/ws/rest/vehicle
-    app.fueleconomy.timeout-ms=5000
+    public VehicleDetailsDto getVehicleDetails(long vehicleId) {
+        throw new UnsupportedOperationException("Noch nicht implementiert.");
+    }
 }

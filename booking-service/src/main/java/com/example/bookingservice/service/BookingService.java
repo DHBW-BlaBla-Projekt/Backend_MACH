@@ -88,19 +88,13 @@ public class BookingService {
             throw new IllegalStateException("Die Abfahrtszeit liegt bereits in der Vergangenheit.");
         }
 
-        long confirmedBookingsCount = bookingRepository.countByRideIdAndStatus(rideId, Booking.BookingStatus.CONFIRMED);
+
         Integer availableSeats = rideInfo.getAvailableSeats();
-        if (availableSeats == null) {
-            throw new IllegalStateException("Anzahl der freien Plätze konnte nicht ermittelt werden.");
+        if (availableSeats == null || availableSeats <= 0) {
+            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt.");
         }
 
-        long remainingSeats = availableSeats - confirmedBookingsCount;
-        if (remainingSeats <= 0) {
-            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt. (Freie Plätze: " + remainingSeats + ")");
-        }
 
-        // Versuche atomar einen Sitz zu buchen. 
-        // Falls keine Sitze mehr frei sind, schlägt dies fehl und die Buchung wird nicht erstellt. 
         if (!rideOfferClient.tryBookSeat(rideId)) { 
             throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt."); 
         } 

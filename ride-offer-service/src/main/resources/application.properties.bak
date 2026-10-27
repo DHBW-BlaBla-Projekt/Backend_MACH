@@ -1,0 +1,37 @@
+spring.application.name=ride-offer-service
+
+spring.profiles.active=julius
+
+# PostgreSQL Datenbank für Ride-Offer-Daten
+spring.datasource.url=${JDBC_DATABASE_URL}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA / Hibernate Konfiguration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# JWT Konfiguration
+app.jwt.secret=${JWT_SECRET}
+app.jwt.expiration-ms=86400000
+app.jwt.refresh-token-expiration-ms=604800000
+
+# RabbitMQ für asynchrone Kommunikation mit Auth-Service und Booking-Service
+app.rabbitmq.enabled=${RABBITMQ_ENABLED:false}
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=guest
+spring.rabbitmq.password=guest
+
+# Exchanges & Queues Konfiguration
+app.rabbitmq.exchange.name=ride-offer-exchange
+app.rabbitmq.queue.name=ride-offer-queue
+app.rabbitmq.routing.key=ride.offer.routing
+
+# Port
+server.port=${PORT:8080}
+
+# === TankKoenig API Konfiguration ===
+app.tankkoenig.api-key=${TANKKOENIG_API_KEY}
+app.tankkoenig.base-url=https://apis.tankkoenig.de
+app.tankkoenig.price-cache-ttl-minutes=120

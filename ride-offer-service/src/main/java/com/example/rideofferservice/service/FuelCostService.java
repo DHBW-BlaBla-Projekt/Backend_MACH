@@ -32,10 +32,10 @@ public class FuelCostService {
             return 0.0;
         }
 
-        // Liter berechnen: (km / 100) * Verbrauch pro 100km
+
         double litersNeeded = (routeLengthKm / 100.0) * ride.getAverageConsumptionLPer100km();
 
-        // Preis aus Cache (der ruft ggf. die TankKoenig-API auf)
+
         double pricePerLiter = getCurrentPrice(ride.getFuelType());
 
         return litersNeeded * pricePerLiter;

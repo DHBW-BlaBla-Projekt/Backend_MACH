@@ -17,7 +17,7 @@ public class TankKoenigClient {
     private final RestClient restClient;
     private final String apiKey;
     private final String baseUrl;
-
+//PLatzhalter, bis API Antrag durch ist.
     public TankKoenigClient(
             @Value("${app.tankkoenig.api-key}") String apiKey,
             @Value("${app.tankkoenig.base-url}") String baseUrl) {

@@ -26,7 +26,7 @@ public class FuelPriceCacheService {
     @Value("${app.tankkoenig.price-cache-ttl-minutes:120}")
     private long cacheTtlMinutes;
 
-    // Memory-Cache: Preis-Mapping + Timestamp
+
     private volatile Map<FuelType, Double> cachedPrices;
     private volatile long lastFetchTime = 0;
 
@@ -54,7 +54,7 @@ public class FuelPriceCacheService {
             return price;
         }
 
-        // Kein Preis von API verfügbar → Fallback-Wert
+
         log.warn("No TankKoenig price for fuelType={}, using fallback value: {}", fuelType, FALLBACK_PRICES.get(fuelType));
         return FALLBACK_PRICES.getOrDefault(fuelType, 1.80);
     }

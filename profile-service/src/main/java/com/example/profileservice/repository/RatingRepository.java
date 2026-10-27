@@ -8,8 +8,8 @@ import java.util.Optional;
 // Datenzugriffsschicht für Ratings
 public interface RatingRepository extends JpaRepository<Rating, Long> {
 
-    /** Prüft, ob ein bestimmter Passagier bereits einen bestimmten Fahrer bewertet hat. */
-    Optional<Rating> findByPassengerUsernameAndDriverUsername(String passengerUsername, String driverUsername);
+    /** Prüft, ob ein bestimmter Passagier bereits eine bestimmte Fahrt bewertet hat. */
+    Optional<Rating> findByPassengerUsernameAndRideId(String passengerUsername, Long rideId);
 
     /** Gibt alle Bewertungen eines Fahrers zurück (den dieser von Passagieren erhalten hat). */
     List<Rating> findByDriverUsername(String driverUsername);

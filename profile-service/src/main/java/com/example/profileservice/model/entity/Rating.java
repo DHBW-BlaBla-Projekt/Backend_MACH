@@ -5,10 +5,12 @@ import java.time.LocalDateTime;
 
 /**
  * Entität für eine Bewertung eines Fahrers durch einen Passagier.
+ * Unique-Constraint: Jeder Passagier kann pro Fahrt genau once bewerten.
+ * Ein Passagier darf also mehrere Bewertungen abgeben, wenn es verschiedene Fahrten sind — auch für denselben Driver.
  */
 @Entity
 @Table(name = "ratings",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"passengerUsername", "driverUsername"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"passenger_username", "ride_id"}))
 public class Rating {
 
     @Id
@@ -16,13 +18,13 @@ public class Rating {
     @SequenceGenerator(name = "rating_seq", sequenceName = "ratings_id_seq", allocationSize = 1)
     private Long id;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "passenger_username", nullable = false, length = 50)
     private String passengerUsername;
 
-    @Column(nullable = false)
+    @Column(name = "ride_id", nullable = false)
     private Long rideId;
 
-    @Column(nullable = false, length = 50)
+    @Column(name = "driver_username", nullable = false, length = 50)
     private String driverUsername;
 
     // Bewertung: 1 (nieder) bis 5 (hoch)
@@ -32,7 +34,7 @@ public class Rating {
     @Column(length = 500)
     private String comment;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     public Rating() {}

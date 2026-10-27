@@ -109,6 +109,47 @@ public class VehicleDataService {
             throw new IllegalArgumentException ("Die Vehicle ID muss eine positive Zahl sein!");
         }
 
-        return loadVehicleDetailsFromCacheOrApi(vehicleId)
+        return loadVehicleDetailsFromCacheOrApi(vehicleId);
     }
+
+    private void validateYear(Integer year) {
+        if(year == null) {
+            throw new IllegalArgumentException("Das Baujahr darf nicht leer sein!");
+        }
+
+        if(year < MIN_YEAR || year > MAX_YEAR) {
+            throw new IllegalArgumentException("Das Baujahr muss zwischen " + MIN_YEAR + " und " + MAX_YEAR + " liegen!");
+        }
+    }
+
+    private String validateText(String value, String fieldName, int maxLength) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " darf nicht leer sein!");
+        }
+
+        String normalized = value.trim()
+
+        if(normalized.length() > maxLength) {
+            throw new IllegalArgumentException(fieldName + " darf maximal " + maxLength + " Zeichen lang sein!");
+        }
+        return normalized;
+    }
+
+    private List<VehicleMenuItemDto> loadMakesFromCacheOrApi(Integer year) {
+        throw new UnsupportedOperationException("Noch nicht implementiert!");
+    }
+
+    private List<VehicleMenuItemDto> loadModelsFromCacheOrApi(Integer year, String make) {
+        throw new UnsupportedOperationException("Noch nicht implementiert!")
+    }
+
+    private List<VehicleMenuItemDto> loadOptionsFromCacheOrApi(Integer year, String make, String model) {
+        throw new UnsupportedOperationException("Noch nicht implementiert!")
+    }
+
+    private List<VehicleMenuItemDto> loadVehicleDetailsFromCacheOrApi(Long vehicleId){
+        throw new UnsupportedOperationException("Noch nicht implementiert!")
+    }
+
+
 }

@@ -35,3 +35,6 @@ out/
 ### VS Code ###
 .vscode/
 .DS_Store
+
+# Local secrets and overrides
+src/main/resources/application-local.properties

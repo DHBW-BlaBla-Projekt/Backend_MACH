@@ -2,7 +2,6 @@ package com.example.rideofferservice.service;
 
 import com.example.rideofferservice.client.TankKoenigClient;
 import com.example.rideofferservice.entity.FuelType;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +18,7 @@ public class FuelPriceCacheService {
     private final TankKoenigClient tankKoenigClient;
 
     @Value("${app.tankkoenig.price-cache-ttl-minutes:120}")
-    private long cacheTtlMinutes;
+    private long cacheTtlMinutes = 120;
 
     private volatile Map<FuelType, Double> cachedPrices = new ConcurrentHashMap<>();
     private volatile Map<FuelType, Boolean> priceFromApiMap = new ConcurrentHashMap<>();
@@ -42,6 +41,9 @@ public class FuelPriceCacheService {
      * Liefert den aktuellen Preis pro Liter für eine Kraftstoffart.
      */
     public double getPrice(FuelType fuelType) {
+        if (fuelType == null) {
+            return 0.0;
+        }
         ensureCacheValid();
         Double price = cachedPrices.get(fuelType);
         if (price != null) {
@@ -55,6 +57,9 @@ public class FuelPriceCacheService {
      * Gibt zurück, ob der Preis für den given FuelType von der TankKoenig-API stammt.
      */
     public boolean isPriceFromApi(FuelType fuelType) {
+        if (fuelType == null) {
+            return false;
+        }
         ensureCacheValid();
         return Boolean.TRUE.equals(priceFromApiMap.get(fuelType));
     }
@@ -93,7 +98,7 @@ public class FuelPriceCacheService {
             
             priceFromApiMap = new ConcurrentHashMap<>();
             for (FuelType ft : FuelType.values()) {
-                priceFromApiMap.put(ft, Boolean.TRUE.equals(apiPrices.get(ft)));
+                priceFromApiMap.put(ft, apiPrices.containsKey(ft));
             }
             lastFetchTime = System.currentTimeMillis();
             apiAvailable = true;
@@ -108,8 +113,9 @@ public class FuelPriceCacheService {
                 for (FuelType ft : FuelType.values()) {
                     priceFromApiMap.put(ft, false);  // alle Fallback
                 }
-                lastFetchTime = System.currentTimeMillis();
             }
+            // Avoid retrying the unavailable upstream on every request.
+            lastFetchTime = System.currentTimeMillis();
         }
     }
 
@@ -122,7 +128,7 @@ public class FuelPriceCacheService {
 
     public Map<FuelType, Double> getCachedPrices() {
         ensureCacheValid();
-        return cachedPrices;
+        return Map.copyOf(cachedPrices);
     }
 
     public long getCacheTtlMinutes() {

@@ -79,6 +79,7 @@ public class SecurityConfig {
                         // Öffentliche Endpunkte — KEIN Token nötig (Health/Info + User-Sync vom Auth-Service)
                         .requestMatchers(
                                 "/hello",
+                                "/api/vehicle-data/**",
                                 "/api/auth/users/sync"  // Sync-Endpunkt muss öffentlich sein (Auth-Service ruft ihn auf)
                         ).permitAll()
                         // Alle anderen Endpunkte erfordern Authentifizierung

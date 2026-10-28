@@ -19,6 +19,7 @@ public class RideResponse {
     private Long carId;
     private Double averageConsumptionLPer100km;
     private FuelType fuelType;
+    private Double estimatedCost;
 
     public RideResponse() {}
 
@@ -38,7 +39,7 @@ public class RideResponse {
     // === Phase 4.3: Konstruktur mit allen neuen Feldern ===
     public RideResponse(Long id, String driverUsername, String startLocation, String endLocation, 
                         LocalDateTime departureTime, Integer availableSeats, String additionalInfo, 
-                        RideOffer.RideStatus status, Long carId, Double averageConsumptionLPer100km, FuelType fuelType) {
+                        RideOffer.RideStatus status, Long carId, Double averageConsumptionLPer100km, FuelType fuelType, Double estimatedCost) {
         this.id = id;
         this.driverUsername = driverUsername;
         this.startLocation = startLocation;
@@ -50,6 +51,7 @@ public class RideResponse {
         this.carId = carId;
         this.averageConsumptionLPer100km = averageConsumptionLPer100km;
         this.fuelType = fuelType;
+        this.estimatedCost = estimatedCost;
     }
 
     public static RideResponse fromEntity(RideOffer entity) {
@@ -78,7 +80,8 @@ public class RideResponse {
             entity.getStatus(),
             entity.getCarId(),
             entity.getAverageConsumptionLPer100km(),
-            entity.getFuelType()
+            entity.getFuelType(),
+            entity.getEstimatedCost()
         );
     }
 
@@ -100,4 +103,8 @@ public class RideResponse {
 
     public FuelType getFuelType() { return fuelType; }
     public void setFuelType(FuelType fuelType) { this.fuelType = fuelType; }
+
+    public Double getEstimatedCost() { return estimatedCost; }
+    public void setEstimatedCost(Double estimatedCost) { this.estimatedCost = estimatedCost; }
+
 }

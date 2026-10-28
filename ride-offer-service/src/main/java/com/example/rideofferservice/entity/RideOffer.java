@@ -64,6 +64,16 @@ public class RideOffer {
     @Column(name = "fuel_type", length = 20)
     private FuelType fuelType;
 
+    @Column(name = "distance_km")
+    private Double distanceKm;
+
+    @Column(name = "estimated_cost")
+    private Double estimatedCost;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "price_source", length = 20)
+    private PriceSource priceSource;
+
     public enum RideStatus {
         OFFERED,
         FULFILLED,
@@ -114,6 +124,9 @@ public class RideOffer {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public LocalDateTime getFulfilledAt() { return fulfilledAt; }
+    public Double getEstimatedCost() { return estimatedCost; }
+    public void setEstimatedCost(Double estimatedCost) { this.estimatedCost = estimatedCost; }
+
     public void setFulfilledAt(LocalDateTime fulfilledAt) { this.fulfilledAt = fulfilledAt; }
 
     // === Phase 4.1: Getter & Setter für die neuen Felder ===
@@ -123,6 +136,12 @@ public class RideOffer {
     public Double getAverageConsumptionLPer100km() { return averageConsumptionLPer100km; }
     public void setAverageConsumptionLPer100km(Double averageConsumptionLPer100km) { this.averageConsumptionLPer100km = averageConsumptionLPer100km; }
 
+    public Double getDistanceKm() { return distanceKm; }
+    public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
+
     public FuelType getFuelType() { return fuelType; }
     public void setFuelType(FuelType fuelType) { this.fuelType = fuelType; }
+
+    public PriceSource getPriceSource() { return priceSource; }
+    public void setPriceSource(PriceSource priceSource) { this.priceSource = priceSource; }
 }

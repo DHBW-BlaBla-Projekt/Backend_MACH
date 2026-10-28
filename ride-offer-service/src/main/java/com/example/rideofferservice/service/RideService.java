@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import com.example.rideofferservice.service.FuelCostService;
+import com.example.rideofferservice.service.FuelPriceCacheService;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +35,8 @@ public class RideService {
     private final RabbitTemplate rabbitTemplate;
     private final boolean rabbitmqAvailable;
     private final ProfileServiceClient profileServiceClient;
+    private final FuelCostService fuelCostService;
+    private final FuelPriceCacheService fuelPriceCacheService;
 
     @Value("${app.rabbitmq.exchange.name}")
     private String exchangeName;
@@ -44,7 +48,9 @@ public class RideService {
             RideRepository rideRepository,
             CachingConnectionFactory connectionFactory,
             ProfileServiceClient profileServiceClient,
-            @Value("${app.rabbitmq.enabled:false}") boolean rabbitmqEnabled) {
+            @Value("${app.rabbitmq.enabled:false}") boolean rabbitmqEnabled,
+            FuelCostService fuelCostService,
+            FuelPriceCacheService fuelPriceCacheService) {
         this.rideRepository = rideRepository;
         this.profileServiceClient = profileServiceClient;
         
@@ -71,6 +77,8 @@ public class RideService {
             template = null;
         }
         this.rabbitTemplate = template;
+        this.fuelCostService = fuelCostService;
+        this.fuelPriceCacheService = fuelPriceCacheService;
     }
 
     public List<RideResponse> getAvailableRides() {
@@ -169,6 +177,16 @@ public class RideService {
         ride.setCarId(carId);
         ride.setAverageConsumptionLPer100km(averageConsumptionLPer100km);
         ride.setFuelType(fuelType);
+        // === distanceKm speichern ===
+        ride.setDistanceKm(request.getDistanceKm());
+
+        // === estimatedCost berechnen und speichern (TankKoenig-API) ===
+        if (fuelType != null && averageConsumptionLPer100km != null && request.getDistanceKm() != null) {
+            FuelCostService.PriceResult priceResult = fuelCostService.calculateEstimatedFuelCost(ride, request.getDistanceKm());
+            Double cost = priceResult.cost();
+            ride.setEstimatedCost(cost);
+            log.info("Berechnete estimatedCost für Ride: {} EUR (Distanz: {} km)", cost, request.getDistanceKm());
+        }
 
         try {
             rideRepository.save(ride);

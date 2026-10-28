@@ -11,11 +11,6 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Caching-Layer für Kraftstoffpreise.
- * Holt Preise von TankKoenig-API und speichert sie mit TTL im Memory-Cache.
- * Fallback auf Hardcoded-Werte wenn API nicht erreichbar.
- */
 @Service
 public class FuelPriceCacheService {
 
@@ -26,9 +21,10 @@ public class FuelPriceCacheService {
     @Value("${app.tankkoenig.price-cache-ttl-minutes:120}")
     private long cacheTtlMinutes;
 
-
-    private volatile Map<FuelType, Double> cachedPrices;
+    private volatile Map<FuelType, Double> cachedPrices = new ConcurrentHashMap<>();
+    private volatile Map<FuelType, Boolean> priceFromApiMap = new ConcurrentHashMap<>();
     private volatile long lastFetchTime = 0;
+    private volatile boolean apiAvailable = false;
 
     // Hardcoded Fallback-Preise (EUR pro Liter)
     private static final Map<FuelType, Double> FALLBACK_PRICES = Map.of(
@@ -44,26 +40,34 @@ public class FuelPriceCacheService {
 
     /**
      * Liefert den aktuellen Preis pro Liter für eine Kraftstoffart.
-     * Bei Cache-Miss oder TTL-Verbrauch wird die API aufgerufen.
      */
     public double getPrice(FuelType fuelType) {
         ensureCacheValid();
-        
         Double price = cachedPrices.get(fuelType);
         if (price != null) {
             return price;
         }
-
-
         log.warn("No TankKoenig price for fuelType={}, using fallback value: {}", fuelType, FALLBACK_PRICES.get(fuelType));
         return FALLBACK_PRICES.getOrDefault(fuelType, 1.80);
     }
 
     /**
-     * Prüft ob der Cache fresh ist oder ein Refetch nötig ist.
+     * Gibt zurück, ob der Preis für den given FuelType von der TankKoenig-API stammt.
      */
+    public boolean isPriceFromApi(FuelType fuelType) {
+        ensureCacheValid();
+        return Boolean.TRUE.equals(priceFromApiMap.get(fuelType));
+    }
+
+    /**
+     * Gibt zurück, ob die API generell verfügbar ist (mindestens eine Kraftstoffart erfolgreich).
+     */
+    public boolean isApiAvailable() {
+        return apiAvailable;
+    }
+
     private synchronized void ensureCacheValid() {
-        if (cachedPrices == null || isCacheExpired()) {
+        if (cachedPrices == null || cachedPrices.isEmpty() || isCacheExpired()) {
             fetchAndCachePrices();
         }
     }
@@ -75,33 +79,52 @@ public class FuelPriceCacheService {
     private synchronized void fetchAndCachePrices() {
         try {
             log.info("Fetching fuel prices from TankKoenig API...");
-            Map<FuelType, Double> apiPrices = tankKoenigClient.fetchAveragePrices();
+            Map<FuelType, Double> rawPrices = tankKoenigClient.fetchAveragePrices();
+            
+            // Filter out null values — ConcurrentHashMap does not accept null keys or values
+            Map<FuelType, Double> apiPrices = new ConcurrentHashMap<>();
+            for (Map.Entry<FuelType, Double> entry : rawPrices.entrySet()) {
+                if (entry.getValue() != null) {
+                    apiPrices.put(entry.getKey(), entry.getValue());
+                }
+            }
+            // Speichere die gefilterten Preise im Cache
             cachedPrices = new ConcurrentHashMap<>(apiPrices);
+            
+            priceFromApiMap = new ConcurrentHashMap<>();
+            for (FuelType ft : FuelType.values()) {
+                priceFromApiMap.put(ft, Boolean.TRUE.equals(apiPrices.get(ft)));
+            }
             lastFetchTime = System.currentTimeMillis();
-            log.info("Fuel prices updated: {}", cachedPrices);
+            apiAvailable = true;
+            log.info("Fuel prices updated: {}, from API: {}", cachedPrices, priceFromApiMap);
         } catch (Exception e) {
             log.error("Failed to fetch fuel prices from TankKoenig API: {}. Using fallback.", e.getMessage());
-            if (cachedPrices == null) {
-                // Erster Aufruf schlägt fehl → Fallback initialisieren
+            apiAvailable = false;
+            
+            if (cachedPrices == null || cachedPrices.isEmpty()) {
                 cachedPrices = new ConcurrentHashMap<>(FALLBACK_PRICES);
+                priceFromApiMap = new ConcurrentHashMap<>();
+                for (FuelType ft : FuelType.values()) {
+                    priceFromApiMap.put(ft, false);  // alle Fallback
+                }
                 lastFetchTime = System.currentTimeMillis();
             }
-            // Bei späteren Fehlern bleibt der alte Cache erhalten
         }
     }
 
-    /**
-     * Wird für Tests / Hot-Reload benötigt.
-     */
     public synchronized void refresh() {
         cachedPrices = null;
+        priceFromApiMap = new ConcurrentHashMap<>();
         lastFetchTime = 0;
         ensureCacheValid();
     }
 
-    /**
-     * Cache-TTL in Minuten (für Runtime-Konfiguration).
-     */
+    public Map<FuelType, Double> getCachedPrices() {
+        ensureCacheValid();
+        return cachedPrices;
+    }
+
     public long getCacheTtlMinutes() {
         return cacheTtlMinutes;
     }

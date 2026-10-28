@@ -1,13 +1,10 @@
 package com.example.rideofferservice.service;
 
 import com.example.rideofferservice.entity.FuelType;
+import com.example.rideofferservice.entity.PriceSource;
 import com.example.rideofferservice.entity.RideOffer;
 import org.springframework.stereotype.Service;
 
-/**
- * Berechnung der geschätzten Kraftstoffkosten für eine Fahrt.
- * Holt aktuelle Spritpreise vom FuelPriceCacheService ( TankKoenig-API mit Caching).
- */
 @Service
 public class FuelCostService {
 
@@ -18,34 +15,29 @@ public class FuelCostService {
     }
 
     /**
-     * Berechnet die geschätzten Kraftstoffkosten für eine Strecke.
-     * Formel: (routeLengthKm / 100) * averageConsumptionLPer100km * pricePerLiter
+     * Berechnet die geschätzten Kraftstoffkosten und gibt Preisquelle zurück.
      */
-    public double calculateEstimatedFuelCost(RideOffer ride, Double routeLengthKm) {
+    public PriceResult calculateEstimatedFuelCost(RideOffer ride, Double routeLengthKm) {
         if (routeLengthKm == null || routeLengthKm <= 0) {
-            return 0.0;
+            return new PriceResult(0.0, PriceSource.FALLBACK);
         }
         if (ride.getAverageConsumptionLPer100km() == null || ride.getAverageConsumptionLPer100km() <= 0) {
-            return 0.0;
+            return new PriceResult(0.0, PriceSource.FALLBACK);
         }
         if (ride.getFuelType() == null) {
-            return 0.0;
+            return new PriceResult(0.0, PriceSource.FALLBACK);
         }
 
-
         double litersNeeded = (routeLengthKm / 100.0) * ride.getAverageConsumptionLPer100km();
-
-
         double pricePerLiter = getCurrentPrice(ride.getFuelType());
+        boolean fromApi = fuelPriceCacheService.isPriceFromApi(ride.getFuelType());
 
-        return litersNeeded * pricePerLiter;
+        return new PriceResult(litersNeeded * pricePerLiter, fromApi ? PriceSource.TANKKOENIG : PriceSource.FALLBACK);
     }
 
-    /**
-     * Liefert den aktuellen Preis pro Liter für eine bestimmte Kraftstoffart.
-     * Holt von FuelPriceCacheService (TankKoenig-API mit TTL-Caching + Fallback).
-     */
     private double getCurrentPrice(FuelType fuelType) {
         return fuelPriceCacheService.getPrice(fuelType);
     }
+
+    public record PriceResult(double cost, PriceSource source) {}
 }

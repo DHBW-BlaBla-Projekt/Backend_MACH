@@ -259,8 +259,15 @@ public class RideService {
     public RideResponse incrementAvailableSeats(Long id) {
         RideOffer ride = rideRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Mitfahrt nicht gefunden!"));
-        if (ride.getAvailableSeats() >= ride.getAvailableSeats()) {
-            // safety check: don't go above original seats - use a reasonable max
+        if (ride.getStatus() == RideOffer.RideStatus.CANCELLED) {
+            throw new IllegalStateException("Eine stornierte Mitfahrt kann nicht wieder aktiviert werden.");
+        }
+        if (ride.getDepartureTime().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("Die Abfahrtszeit liegt bereits in der Vergangenheit.");
+        }
+        if (ride.getStatus() == RideOffer.RideStatus.FULFILLED) {
+            ride.setStatus(RideOffer.RideStatus.OFFERED);
+            ride.setFulfilledAt(null);
         }
         ride.setAvailableSeats(ride.getAvailableSeats() + 1);
         return RideResponse.fromEntityFull(rideRepository.save(ride));

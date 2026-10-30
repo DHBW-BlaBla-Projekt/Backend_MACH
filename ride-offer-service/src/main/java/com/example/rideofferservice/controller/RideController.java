@@ -66,13 +66,15 @@ public class RideController {
     }
 
     @PostMapping
-    public ResponseEntity<RideResponse> createRide(
+    public ResponseEntity<?> createRide(
             @Valid @RequestBody CreateRideRequest request,
             Principal principal) {
-        String username = principal.getName();
-
-        RideResponse created = rideService.createRide(username, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        try {
+            RideResponse created = rideService.createRide(principal.getName(), request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**

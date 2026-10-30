@@ -159,7 +159,8 @@ public class RideService {
                 CarInfoDto carData = profileServiceClient.getCarById(carId);
 
                 if (carData == null) {
-                    throw new RuntimeException("Car mit ID " + carId + " im Profile-Service nicht gefunden.");
+                    throw new IllegalArgumentException(
+                            "Fahrzeug mit der ID " + carId + " wurde nicht gefunden.");
                 }
 
                 log.info("Car-Daten für carId {} geladen: brand={}, name={}, consumption={} l/100km, fuelType={}", 
@@ -169,7 +170,7 @@ public class RideService {
                 averageConsumptionLPer100km = carData.getAverageConsumptionLPer100km();
                 fuelType = carData.getFuelType() != null ? FuelType.valueOf(carData.getFuelType().name()) : null;
             } catch (IllegalStateException e) {
-                throw new RuntimeException("Car-Daten können nicht geladen werden: " + e.getMessage());
+                throw new IllegalArgumentException("Fahrzeugdaten können nicht geladen werden: " + e.getMessage());
             }
         }
 

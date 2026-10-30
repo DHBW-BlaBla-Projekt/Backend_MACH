@@ -56,6 +56,9 @@ public class ProfileServiceClient {
         } catch (HttpClientErrorException.NotFound e) {
             log.error("Car {} nicht gefunden im Profile-Service", carId);
             return null;
+        } catch (HttpClientErrorException.Forbidden e) {
+            throw new IllegalArgumentException(
+                    "Das Fahrzeug mit der ID " + carId + " gehört nicht zum angemeldeten Benutzer.");
         } catch (Exception e) {
             log.error("Fehler beim Abruf des Cars {}: {}", carId, e.getMessage());
             throw new RuntimeException("Kann Profile-Service nicht erreichen: " + e.getMessage());

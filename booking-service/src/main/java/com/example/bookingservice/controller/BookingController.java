@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,9 @@ public class BookingController {
             return ResponseEntity.status(HttpStatus.CREATED).body(booking);
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (DataIntegrityViolationException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "error", "Du hast diese Mitfahrt bereits gebucht."));
         } catch (RuntimeException e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Interner Fehler: " + e.getMessage()));
         }

@@ -4,7 +4,11 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "bookings")
+@Table(name = "bookings", uniqueConstraints = {
+        @UniqueConstraint(
+                name = "uk_booking_active_ride_passenger",
+                columnNames = {"ride_id", "active_booking_key"})
+})
 public class Booking {
 
     @Id
@@ -16,6 +20,9 @@ public class Booking {
 
     @Column(name = "passenger_username", nullable = false, length = 50)
     private String passengerUsername;
+
+    @Column(name = "active_booking_key", length = 50)
+    private String activeBookingKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -34,6 +41,7 @@ public class Booking {
     public Booking(Long rideId, String passengerUsername) {
         this.rideId = rideId;
         this.passengerUsername = passengerUsername;
+        this.activeBookingKey = passengerUsername.toLowerCase(java.util.Locale.ROOT);
         this.status = BookingStatus.CONFIRMED;
         this.createdAt = LocalDateTime.now();
     }
@@ -46,6 +54,9 @@ public class Booking {
 
     public String getPassengerUsername() { return passengerUsername; }
     public void setPassengerUsername(String passengerUsername) { this.passengerUsername = passengerUsername; }
+
+    public String getActiveBookingKey() { return activeBookingKey; }
+    public void setActiveBookingKey(String activeBookingKey) { this.activeBookingKey = activeBookingKey; }
 
     public BookingStatus getStatus() { return status; }
     public void setStatus(BookingStatus status) { this.status = status; }

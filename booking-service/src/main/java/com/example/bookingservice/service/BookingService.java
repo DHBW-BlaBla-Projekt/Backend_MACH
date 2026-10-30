@@ -163,6 +163,7 @@ public class BookingService {
         }
 
         booking.setStatus(Booking.BookingStatus.CANCELLED);
+        booking.setActiveBookingKey(null);
         bookingRepository.save(booking);
 
         // Freigebe den Sitz wieder im Ride-Offer-Service

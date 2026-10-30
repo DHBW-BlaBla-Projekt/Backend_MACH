@@ -3,9 +3,12 @@ package com.example.profileservice.client;
 import com.example.profileservice.dto.VehicleDetailsDto;
 import com.example.profileservice.dto.VehicleMenuItemDto;
 import com.example.profileservice.dto.VehicleOptionDto;
+import com.example.profileservice.exception.VehicleDataUnavailableException;
+import com.example.profileservice.exception.VehicleNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -61,7 +64,18 @@ public class FuelEconomyClient {
     }
 
     public VehicleDetailsDto getVehicleDetails(long vehicleId) {
-        Document document = parse(get("/vehicle/" + vehicleId));
+        String response;
+        try {
+            response = get("/vehicle/" + vehicleId);
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 404) {
+                throw new VehicleNotFoundException(vehicleId);
+            }
+            throw new VehicleDataUnavailableException(
+                    "Fahrzeugdaten konnten nicht geladen werden (externer Dienst: HTTP "
+                            + exception.getStatusCode().value() + ").", exception);
+        }
+        Document document = parse(response);
         Node vehicle = document.getDocumentElement();
         VehicleDetailsDto details = new VehicleDetailsDto();
         details.setVehicleId(vehicleId);

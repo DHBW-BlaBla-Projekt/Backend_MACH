@@ -78,6 +78,11 @@ public class BookingService {
             throw new IllegalArgumentException("Mitfahrt nicht gefunden: " + rideId);
         }
 
+        if (rideInfo.getDriverUsername() != null
+                && rideInfo.getDriverUsername().equalsIgnoreCase(username)) {
+            throw new IllegalStateException("Du kannst deine eigene Fahrt nicht buchen.");
+        }
+
         if (bookingRepository.existsByRideIdAndPassengerUsernameIgnoreCaseAndStatus(
                 rideId, username, Booking.BookingStatus.CONFIRMED)) {
             throw new IllegalStateException("Du hast diese Mitfahrt bereits gebucht.");

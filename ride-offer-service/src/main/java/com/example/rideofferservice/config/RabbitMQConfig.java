@@ -20,9 +20,6 @@ public class RabbitMQConfig {
     @Value("${app.rabbitmq.exchange.name}")
     private String exchangeName;
 
-    @Value("${app.rabbitmq.queue.name}")
-    private String queueName;
-
     @Value("${app.rabbitmq.routing.key}")
     private String routingKey;
 
@@ -38,24 +35,6 @@ public class RabbitMQConfig {
     @Bean
     public TopicExchange rideOfferExchange() {
         return new TopicExchange(exchangeName, true, false);
-    }
-
-    /**
-     * Erstelle die Queue für Ride-Offer-Events.
-     */
-    @Bean
-    public Queue rideOfferQueue() {
-        return QueueBuilder.durable(queueName).build();
-    }
-
-    /**
-     * Binde die Queue an den Exchange mit dem Routing-Key.
-     */
-    @Bean
-    public Binding rideOfferBinding(Queue rideOfferQueue, TopicExchange rideOfferExchange) {
-        return BindingBuilder.bind(rideOfferQueue)
-                .to(rideOfferExchange)
-                .with(routingKey);
     }
 
     @Bean

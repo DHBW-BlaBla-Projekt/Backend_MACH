@@ -70,7 +70,7 @@ public class RatingController {
         String username = authentication.getName(); // Username aus dem JWT-Token
 
         // Sicherheitscheck: Der Benutzer muss existieren und aktiv sein
-        Optional<User> userOpt = userRepository.findByUsername(username);
+        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body(Map.of(
                     "statusCode", 401,

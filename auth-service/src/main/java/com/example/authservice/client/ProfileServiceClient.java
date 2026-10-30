@@ -34,7 +34,7 @@ public class ProfileServiceClient {
         String url = profileServiceUrl + "/api/auth/users/sync";
         try {
             Map<String, String> body = new java.util.HashMap<>();
-            body.put("username", username.toLowerCase());
+            body.put("username", username);
             body.put("password", password != null ? password : "");
             body.put("role", role != null ? role : "USER");
 

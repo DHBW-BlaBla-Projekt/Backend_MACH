@@ -78,6 +78,11 @@ public class BookingService {
             throw new IllegalArgumentException("Mitfahrt nicht gefunden: " + rideId);
         }
 
+        if (bookingRepository.existsByRideIdAndPassengerUsernameIgnoreCaseAndStatus(
+                rideId, username, Booking.BookingStatus.CONFIRMED)) {
+            throw new IllegalStateException("Du hast diese Mitfahrt bereits gebucht.");
+        }
+
         String status = rideInfo.getStatus();
         if (!"OFFERED".equals(status)) {
             throw new IllegalStateException("Die Mitfahrt ist nicht mehr verfügbar. Status: " + status);

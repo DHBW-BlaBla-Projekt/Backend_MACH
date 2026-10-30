@@ -32,7 +32,7 @@ public class JwtTokenProvider {
         Date expiry = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
-                .subject(username.toLowerCase()) // <-- Immer klein speichern!
+                .subject(username)
                 .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiry)
@@ -41,7 +41,7 @@ public class JwtTokenProvider {
     }
 
     public String getUsernameFromToken(String token) {
-        return getClaims(token).getPayload().getSubject().toLowerCase();
+        return getClaims(token).getPayload().getSubject();
     }
 
     public String getRoleFromToken(String token) {

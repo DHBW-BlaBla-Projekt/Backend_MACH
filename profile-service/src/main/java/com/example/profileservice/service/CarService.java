@@ -75,7 +75,7 @@ public class CarService {
     @Transactional
     public Car createOrUpdateCar(String username, String brand, String model,
                                  Double averageConsumptionLPer100km, Car.FuelType fuelType) {
-        var user = userRepository.findByUsername(username.toLowerCase())
+        var user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new IllegalArgumentException("User nicht gefunden: " + username));
 
         Long userId = user.getId();
@@ -121,7 +121,7 @@ public class CarService {
      */
     @Transactional(readOnly = true)
     public List<Car> getAllCarsByUsername(String username) {
-        var user = userRepository.findByUsername(username.toLowerCase())
+        var user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new IllegalArgumentException("User nicht gefunden: " + username));
         return carRepository.findByUserId(user.getId());
     }
@@ -131,7 +131,7 @@ public class CarService {
      */
     @Transactional(readOnly = true)
     public Optional<Car> getCarForUser(String username) {
-        var user = userRepository.findByUsername(username.toLowerCase())
+        var user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new IllegalArgumentException("User nicht gefunden: " + username));
         List<Car> cars = carRepository.findByUserId(user.getId());
         return cars.isEmpty() ? Optional.empty() : Optional.of(cars.get(0));

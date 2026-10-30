@@ -34,7 +34,7 @@ public class CarController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
-        var user = userRepository.findByUsername(username.toLowerCase())
+        var user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new IllegalArgumentException("User nicht gefunden: " + username));
 
         Car.FuelType fuelType;
@@ -86,7 +86,7 @@ public class CarController {
         Car car = carOpt.get();
         
         // Sicherheitscheck: Darf der User auf dieses Auto zugreifen?
-        var user = userRepository.findByUsername(username.toLowerCase())
+        var user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new IllegalArgumentException("User nicht gefunden: " + username));
                 
         if (!car.getUserId().equals(user.getId())) {

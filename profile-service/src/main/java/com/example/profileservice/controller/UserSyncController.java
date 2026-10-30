@@ -38,9 +38,9 @@ public class UserSyncController {
             ));
         }
 
-        String username = request.getUsername().toLowerCase();
+        String username = request.getUsername().trim();
 
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseGet(() -> {
                     User newUser = new User();
                     newUser.setUsername(username);

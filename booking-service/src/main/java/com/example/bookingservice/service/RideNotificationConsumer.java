@@ -27,7 +27,13 @@ public class RideNotificationConsumer {
      */
     @RabbitListener(queues = "${app.rabbitmq.queue.booking}")
     public void handleRideCancelledEvent(Map<String, Object> event) {
-        Long rideId = (Long) event.get("rideId");
+        if (!"RIDE_CANCELLED".equals(event.get("eventType"))) {
+            log.debug("Ride-Event ignoriert, da es kein Storno-Event ist: {}", event);
+            return;
+        }
+
+        Object rideIdValue = event.get("rideId");
+        Long rideId = rideIdValue instanceof Number ? ((Number) rideIdValue).longValue() : null;
         log.info("Booking: RideCancelledEvent für Ride {} empfangen", rideId);
 
         if (rideId == null) {

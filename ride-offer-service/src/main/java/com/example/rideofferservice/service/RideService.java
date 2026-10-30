@@ -44,6 +44,9 @@ public class RideService {
     @Value("${app.rabbitmq.routing.key}")
     private String routingKey;
 
+    @Value("${app.rabbitmq.routing.key.cancelled:ride.cancelled.routing}")
+    private String cancelledRoutingKey;
+
     public RideService(
             RideRepository rideRepository,
             CachingConnectionFactory connectionFactory,
@@ -82,35 +85,39 @@ public class RideService {
     }
 
     public List<RideResponse> getAvailableRides() {
-        return rideRepository.findByStatus(RideOffer.RideStatus.OFFERED)
+        return rideRepository.findByStatusAndDepartureTimeAfter(
+                        RideOffer.RideStatus.OFFERED, LocalDateTime.now())
                 .stream()
                 .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> searchRides(String startLocation, String endLocation) {
-        return rideRepository.findByStartAndEndLocation(startLocation, endLocation)
+        return rideRepository.findByStartAndEndLocation(startLocation, endLocation, LocalDateTime.now())
                 .stream()
                 .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> searchRidesBetween(String startLocation, String endLocation, LocalDateTime from, LocalDateTime to) {
-        return rideRepository.findByStartAndEndBetween(startLocation, endLocation, from, to)
+        return rideRepository.findByStartAndEndBetween(
+                        startLocation, endLocation, from, to, LocalDateTime.now())
                 .stream()
                 .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> searchRidesAfter(String startLocation, String endLocation, LocalDateTime from) {
-        return rideRepository.findByStartAndEndAfter(startLocation, endLocation, from)
+        return rideRepository.findByStartAndEndAfter(
+                        startLocation, endLocation, from, LocalDateTime.now())
                 .stream()
                 .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
 
     public List<RideResponse> searchRidesBefore(String startLocation, String endLocation, LocalDateTime to) {
-        return rideRepository.findByStartAndEndBefore(startLocation, endLocation, to)
+        return rideRepository.findByStartAndEndBefore(
+                        startLocation, endLocation, to, LocalDateTime.now())
                 .stream()
                 .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
@@ -124,8 +131,10 @@ public class RideService {
     }
 
     public List<RideResponse> getMyOfferedRides(String username) {
-        return rideRepository.findByDriverUsernameAndStatus(username, RideOffer.RideStatus.OFFERED)
+        return rideRepository.findByStatusAndDriverUsername(
+                        RideOffer.RideStatus.OFFERED, username)
                 .stream()
+                .filter(ride -> ride.getDepartureTime().isAfter(LocalDateTime.now()))
                 .map(RideResponse::fromEntityFull)
                 .collect(Collectors.toList());
     }
@@ -318,7 +327,8 @@ public class RideService {
             event.setDriverUsername(ride.getDriverUsername());
             event.setTimestamp(LocalDateTime.now());
 
-            rabbitTemplate.convertAndSend(exchangeName, routingKey, event);
+            event.setEventType("RIDE_CANCELLED");
+            rabbitTemplate.convertAndSend(exchangeName, cancelledRoutingKey, event);
             log.info("RideCancelledEvent gesendet: {}", ride.getId());
         } catch (Exception e) {
             log.warn("Fehler beim Senden von RideCancelledEvent: {}. Ride wurde gespeichert.", e.getMessage());
@@ -336,6 +346,7 @@ public class RideService {
         private LocalDateTime departureTime;
         private Integer availableSeats;
         private LocalDateTime timestamp;
+        private String eventType = "RIDE_OFFERED";
 
         public Long getRideId() { return rideId; }
         public void setRideId(Long rideId) { this.rideId = rideId; }
@@ -351,6 +362,8 @@ public class RideService {
         public void setAvailableSeats(Integer availableSeats) { this.availableSeats = availableSeats; }
         public LocalDateTime getTimestamp() { return timestamp; }
         public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+        public String getEventType() { return eventType; }
+        public void setEventType(String eventType) { this.eventType = eventType; }
     }
 
     /**
@@ -360,6 +373,7 @@ public class RideService {
         private Long rideId;
         private String driverUsername;
         private LocalDateTime timestamp;
+        private String eventType = "RIDE_CANCELLED";
 
         public Long getRideId() { return rideId; }
         public void setRideId(Long rideId) { this.rideId = rideId; }
@@ -367,5 +381,7 @@ public class RideService {
         public void setDriverUsername(String driverUsername) { this.driverUsername = driverUsername; }
         public LocalDateTime getTimestamp() { return timestamp; }
         public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+        public String getEventType() { return eventType; }
+        public void setEventType(String eventType) { this.eventType = eventType; }
     }
 }

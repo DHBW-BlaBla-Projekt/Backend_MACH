@@ -57,7 +57,14 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+        String username = request.getUsername() == null ? "" : request.getUsername().trim();
+        if (username.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "statusCode", 400,
+                    "error", "Username darf nicht leer sein!"));
+        }
+
+        if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
             return ResponseEntity.badRequest().body(Map.of(
                     "statusCode", 400,
                     "error", "Username bereits vergeben!"));
@@ -79,7 +86,7 @@ public class AuthController {
 
 
         User user = new User();
-        user.setUsername(request.getUsername());
+        user.setUsername(username);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole("USER");  // Immer USER
 
@@ -114,7 +121,7 @@ public class AuthController {
                     "error", "Ungültiger Benutzername oder Passwort!"));
         }
 
-        User user = userRepository.findByUsername(request.getUsername()).orElseThrow();
+        User user = userRepository.findByUsernameIgnoreCase(request.getUsername()).orElseThrow();
         
         // Stelle sicher, dass der User im Profile-Service existiert (on-demand sync)
         try {

@@ -2,6 +2,7 @@ package com.example.bookingservice.controller;
 
 import com.example.bookingservice.dto.BookingResponse;
 import com.example.bookingservice.dto.CreateBookingRequest;
+import com.example.bookingservice.exception.BookingEventPublishException;
 import com.example.bookingservice.service.BookingService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -107,6 +108,9 @@ public class BookingController {
             return ResponseEntity.ok(Map.of("message", "Buchung erfolgreich gelöscht!"));
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        } catch (BookingEventPublishException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
         }

@@ -7,6 +7,8 @@ import com.example.authservice.client.ProfileServiceClient;
 import com.example.authservice.model.entity.RefreshToken;
 import com.example.authservice.model.entity.User;
 import com.example.authservice.repository.UserRepository;
+import com.example.authservice.ratelimit.RateLimiter;
+import com.example.authservice.ratelimit.RateLimitResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -32,6 +34,7 @@ public class AuthController {
     private final JwtTokenProvider tokenProvider;
     private final com.example.authservice.service.RefreshTokenService refreshTokenService;
     private final ProfileServiceClient profileServiceClient;
+    private final RateLimiter rateLimiter;
 
     /**
      * Konstruktor mit Dependency Injection.
@@ -42,13 +45,15 @@ public class AuthController {
             AuthenticationManager authenticationManager,
             JwtTokenProvider tokenProvider,
             com.example.authservice.service.RefreshTokenService refreshTokenService,
-            ProfileServiceClient profileServiceClient) {
+            ProfileServiceClient profileServiceClient,
+            RateLimiter rateLimiter) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.tokenProvider = tokenProvider;
         this.refreshTokenService = refreshTokenService;
         this.profileServiceClient = profileServiceClient;
+        this.rateLimiter = rateLimiter;
     }
 
 
@@ -64,7 +69,13 @@ public class AuthController {
                     "error", "Username darf nicht leer sein!"));
         }
 
+        // Username-basiertes Rate-Limit für Registration prüfen UND verbrauchen
+        if (!rateLimiter.tryConsume(username, rateLimiter.getAttemptsByUsernameMap())) {
+            return ResponseEntity.status(429).body(RateLimitResponse.ofUsername(username));
+        }
+
         if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+            // Failed registration counts against the limit – schon durch tryConconsume gezählt!
             return ResponseEntity.badRequest().body(Map.of(
                     "statusCode", 400,
                     "error", "Username bereits vergeben!"));
@@ -92,12 +103,14 @@ public class AuthController {
 
         userRepository.save(user);
 
+        // Successful registration resets the counter for this username
+        rateLimiter.recordSuccess(username, rateLimiter.getAttemptsByUsernameMap());
+
         // Synchronisiere den User sofort mit dem Profile-Service
         try {
             profileServiceClient.syncUser(user.getUsername(), request.getPassword(), user.getRole());
         } catch (Exception e) {
             // Sync-Fehler sind nicht kritisch – der Login funktioniert trotzdem
-            // wird im Client geloggt
         }
 
         return ResponseEntity.ok(Map.of(
@@ -111,15 +124,27 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        String username = request.getUsername() == null ? "" : request.getUsername().trim();
+
+        // Username-basiertes Rate-Limit prüfen UND verbrauchen (complementiert IP-Limit aus Filter)
+        if (!rateLimiter.tryConsume(username, rateLimiter.getAttemptsByUsernameMap())) {
+            return ResponseEntity.status(429).body(RateLimitResponse.ofUsername(username));
+        }
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
         } catch (AuthenticationException e) {
+            // Falscher Versuch – schon durch tryConsume oben gezählt!
+            // Kein recordFailure nötig. Einfach 401 zurückgeben.
             return ResponseEntity.status(401).body(Map.of(
                     "statusCode", 401,
                     "error", "Ungültiger Benutzername oder Passwort!"));
         }
+
+        // Successful login resets the counter for this username
+        rateLimiter.recordSuccess(username, rateLimiter.getAttemptsByUsernameMap());
 
         User user = userRepository.findByUsernameIgnoreCase(request.getUsername()).orElseThrow();
         

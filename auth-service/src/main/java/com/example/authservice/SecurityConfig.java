@@ -2,6 +2,7 @@ package com.example.authservice;
 
 import com.example.authservice.auth.JwtAuthenticationFilter;
 import com.example.authservice.auth.JwtTokenProvider;
+import com.example.authservice.ratelimit.RateLimitFilter;
 import com.example.authservice.service.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +32,7 @@ public class SecurityConfig {
     @Autowired
     private JwtTokenProvider tokenProvider;
 
+    // RateLimitFilter ist als @Component registriert und wird automatisch als Bean erkannt.
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -68,7 +70,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // CORS aktivieren
                 .csrf(csrf -> csrf.disable())
@@ -87,7 +89,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
-                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+                // Filter-Reihenfolge: RateLimit FIRST, dann JWT-Auth
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(jwtAuthenticationFilter(), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

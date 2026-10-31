@@ -32,7 +32,7 @@ public class SecurityConfig {
     @Autowired
     private JwtTokenProvider tokenProvider;
 
-    // RateLimitFilter ist als @Component registriert und wird automatisch als Bean erkannt.
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -49,7 +49,7 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(tokenProvider, userDetailsService);
     }
 
-    // CORS: Erlaubt Frontend auf beliebigen Ports/Domains
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -81,15 +81,12 @@ public class SecurityConfig {
                                 "/hello",
                                 "/api/auth/register",
                                 "/api/auth/login",
-                                "/api/auth/refresh-token"   // Refresh darf ohne gültigen Token gehen,
-                                                           // der Endpoint prüft selbst den Header
+                                "/api/auth/refresh-token"
                         ).permitAll()
-                        // Logout wird im Controller geprüft (kein Token nötig für die Anfrage)
                         .requestMatchers("/api/auth/logout").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
-                // Filter-Reihenfolge: RateLimit FIRST, dann JWT-Auth
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(jwtAuthenticationFilter(), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 

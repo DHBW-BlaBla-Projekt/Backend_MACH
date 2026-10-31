@@ -1,6 +1,6 @@
 package com.example.authservice.auth.dto;
 
-//DTO für Refresh-Anfrage – der Token kommt aus dem Header, hier nur als Platzhalter für Body-Optional
+
 public class RefreshRequest {
     private String refreshToken;
 

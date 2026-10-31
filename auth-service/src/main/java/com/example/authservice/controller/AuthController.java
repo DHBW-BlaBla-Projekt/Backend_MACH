@@ -69,7 +69,7 @@ public class AuthController {
                     "error", "Username darf nicht leer sein!"));
         }
 
-        // Username-basiertes Rate-Limit für Registration prüfen UND verbrauchen
+
         if (!rateLimiter.tryConsume(username, rateLimiter.getAttemptsByUsernameMap())) {
             return ResponseEntity.status(429).body(RateLimitResponse.ofUsername(username));
         }
@@ -103,14 +103,11 @@ public class AuthController {
 
         userRepository.save(user);
 
-        // Successful registration resets the counter for this username
         rateLimiter.recordSuccess(username, rateLimiter.getAttemptsByUsernameMap());
 
-        // Synchronisiere den User sofort mit dem Profile-Service
         try {
             profileServiceClient.syncUser(user.getUsername(), request.getPassword(), user.getRole());
         } catch (Exception e) {
-            // Sync-Fehler sind nicht kritisch – der Login funktioniert trotzdem
         }
 
         return ResponseEntity.ok(Map.of(
@@ -126,7 +123,7 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         String username = request.getUsername() == null ? "" : request.getUsername().trim();
 
-        // Username-basiertes Rate-Limit prüfen UND verbrauchen (complementiert IP-Limit aus Filter)
+
         if (!rateLimiter.tryConsume(username, rateLimiter.getAttemptsByUsernameMap())) {
             return ResponseEntity.status(429).body(RateLimitResponse.ofUsername(username));
         }
@@ -136,23 +133,22 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
         } catch (AuthenticationException e) {
-            // Falscher Versuch – schon durch tryConsume oben gezählt!
-            // Kein recordFailure nötig. Einfach 401 zurückgeben.
+
             return ResponseEntity.status(401).body(Map.of(
                     "statusCode", 401,
                     "error", "Ungültiger Benutzername oder Passwort!"));
         }
 
-        // Successful login resets the counter for this username
+
         rateLimiter.recordSuccess(username, rateLimiter.getAttemptsByUsernameMap());
 
         User user = userRepository.findByUsernameIgnoreCase(request.getUsername()).orElseThrow();
         
-        // Stelle sicher, dass der User im Profile-Service existiert (on-demand sync)
+
         try {
             profileServiceClient.syncUser(user.getUsername(), "", user.getRole());
         } catch (Exception e) {
-            // Sync-Fehler sind nicht kritisch für den Login
+
         }
 
         String accessToken = tokenProvider.generateAccessToken(user.getUsername(), user.getRole());

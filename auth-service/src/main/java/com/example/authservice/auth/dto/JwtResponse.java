@@ -1,7 +1,7 @@
 package com.example.authservice.auth.dto;
 
 
-//DTO
+
 public class JwtResponse {
     private String accessToken;
     private String refreshToken;

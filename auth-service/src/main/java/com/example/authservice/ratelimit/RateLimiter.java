@@ -35,20 +35,20 @@ public class RateLimiter {
     public boolean tryConsume(String key, ConcurrentHashMap<String, AttemptInfo> storage) {
         long now = System.currentTimeMillis();
 
-        // Atomar: entweder existierender Eintrag mit erhöhtem Counter ODER neuer Eintrag mit Counter=1
-        AtomicInteger counter = storage.compute(key, (k, existing) -> {
+
+        AttemptInfo info = storage.compute(key, (k, existing) -> {
             if (existing == null || (now - existing.startTime) > Config.WINDOW_MILLIS) {
                 // Neues Fenster starten – Counter auf 1 setzen
                 AttemptInfo newInfo = new AttemptInfo(now);
                 return newInfo;
             }
-            // Bereits existierendes Fenster – Counter erhöhen
+
             existing.attempts.incrementAndGet();
             return existing;
         });
 
-        if (counter.get() > Config.MAX_ATTEMPTS) {
-            // Limit überschritten
+        if (info.attempts.get() > Config.MAX_ATTEMPTS) {
+           
             return false;
         }
 

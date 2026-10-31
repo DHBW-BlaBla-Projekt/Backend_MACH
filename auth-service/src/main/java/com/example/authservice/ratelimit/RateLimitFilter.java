@@ -38,13 +38,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String ip = getClientIp(request);
 
-        // Check: IP-Limit – verbraucht atomar einen Slot
         if (!rateLimiter.tryConsume(ip, rateLimiter.getAttemptsByIpMap())) {
             writeRateLimitResponse(response, RateLimitResponse.ofIp());
             return;
         }
 
-        // Beide Limits OK → weiter zum Controller
+
         filterChain.doFilter(request, response);
     }
 

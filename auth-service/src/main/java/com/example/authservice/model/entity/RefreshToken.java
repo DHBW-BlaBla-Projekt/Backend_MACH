@@ -43,7 +43,7 @@ public class RefreshToken {
     public void setUser(User user) { this.user = user; }
 
 
-    //Prüft ob der Token noch gültig ist
+
     public boolean isExpired() {
         return Instant.now().isAfter(this.expiryDate);
     }

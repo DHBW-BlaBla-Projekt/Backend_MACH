@@ -148,7 +148,6 @@ public class RideService {
             throw new IllegalArgumentException("Abfahrtszeit muss in der Zukunft liegen.");
         }
 
-        // === Car-Daten über Profile-Service laden ===
         Long carId = request.getCarId();
         Double averageConsumptionLPer100km = null;
         FuelType fuelType = null;
@@ -182,15 +181,12 @@ public class RideService {
         ride.setAvailableSeats(request.getAvailableSeats());
         ride.setAdditionalInfo(request.getAdditionalInfo());
         ride.setStatus(RideOffer.RideStatus.OFFERED);
-        
-        // === Fahrzeugdaten speichern ===
+
         ride.setCarId(carId);
         ride.setAverageConsumptionLPer100km(averageConsumptionLPer100km);
         ride.setFuelType(fuelType);
-        // === distanceKm speichern ===
         ride.setDistanceKm(request.getDistanceKm());
 
-        // === estimatedCost berechnen und speichern (TankKoenig-API) ===
         if (fuelType != null && averageConsumptionLPer100km != null && request.getDistanceKm() != null) {
             FuelCostService.PriceResult priceResult = fuelCostService.calculateEstimatedFuelCost(ride, request.getDistanceKm());
             Double cost = priceResult.cost();

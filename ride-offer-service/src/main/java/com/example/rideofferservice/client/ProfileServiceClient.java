@@ -35,7 +35,6 @@ public class ProfileServiceClient {
     public CarInfoDto getCarById(Long carId) {
         String url = profileServiceUrl + "/api/profile/cars/" + carId;
 
-        // JWT-Token aus dem aktuellen SecurityContext holen
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String token = null;
         if (auth != null && auth.getCredentials() instanceof String) {

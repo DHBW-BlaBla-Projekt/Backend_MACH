@@ -25,7 +25,6 @@ public class FuelPriceCacheService {
     private volatile long lastFetchTime = 0;
     private volatile boolean apiAvailable = false;
 
-    // Hardcoded Fallback-Preise (EUR pro Liter)
     private static final Map<FuelType, Double> FALLBACK_PRICES = Map.of(
             FuelType.PETROL, 1.85,
             FuelType.DIESEL, 1.70,
@@ -93,7 +92,6 @@ public class FuelPriceCacheService {
                     apiPrices.put(entry.getKey(), entry.getValue());
                 }
             }
-            // Speichere die gefilterten Preise im Cache
             cachedPrices = new ConcurrentHashMap<>(apiPrices);
             
             priceFromApiMap = new ConcurrentHashMap<>();
@@ -114,7 +112,6 @@ public class FuelPriceCacheService {
                     priceFromApiMap.put(ft, false);  // alle Fallback
                 }
             }
-            // Avoid retrying the unavailable upstream on every request.
             lastFetchTime = System.currentTimeMillis();
         }
     }

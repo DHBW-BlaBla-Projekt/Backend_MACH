@@ -14,8 +14,6 @@ public class RideResponse {
     private Integer availableSeats;
     private String additionalInfo;
     private RideOffer.RideStatus status;
-
-    // === Phase 4.3: Neue Felder für Fahrzeugdaten ===
     private Long carId;
     private Double averageConsumptionLPer100km;
     private FuelType fuelType;
@@ -36,7 +34,6 @@ public class RideResponse {
         this.status = status;
     }
 
-    // === Phase 4.3: Konstruktur mit allen neuen Feldern ===
     public RideResponse(Long id, String driverUsername, String startLocation, String endLocation, 
                         LocalDateTime departureTime, Integer availableSeats, String additionalInfo, 
                         RideOffer.RideStatus status, Long carId, Double averageConsumptionLPer100km, FuelType fuelType, Double estimatedCost) {
@@ -67,7 +64,6 @@ public class RideResponse {
         );
     }
 
-    // === Phase 4.3: Overloaded fromEntity für die neuen Felder ===
     public static RideResponse fromEntityFull(RideOffer entity) {
         return new RideResponse(
             entity.getId(),
@@ -94,7 +90,7 @@ public class RideResponse {
     public String getAdditionalInfo() { return additionalInfo; }
     public RideOffer.RideStatus getStatus() { return status; }
 
-    // === Phase 4.3: Getter & Setter für die neuen Felder ===
+
     public Long getCarId() { return carId; }
     public void setCarId(Long carId) { this.carId = carId; }
 

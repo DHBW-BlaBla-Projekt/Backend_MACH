@@ -26,7 +26,6 @@ public class CreateRideRequest {
     @Positive(message = "distanceKm muss > 0 sein")
     private Double distanceKm;
 
-    // === Nur carId: name, brand, averageConsumptionLPer100km, fuelType werden automatisch geladen ===
     @NotNull(message = "carId ist erforderlich")
     private Long carId;
 

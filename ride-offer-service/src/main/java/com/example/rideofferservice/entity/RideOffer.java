@@ -6,7 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -53,7 +52,6 @@ public class RideOffer {
     @Column(name = "fulfilled_at")
     private LocalDateTime fulfilledAt;
 
-    // === Phase 4.1: Neue Felder für Fahrzeugdaten ===
     @Column(name = "car_id")
     private Long carId;
 
@@ -129,7 +127,6 @@ public class RideOffer {
 
     public void setFulfilledAt(LocalDateTime fulfilledAt) { this.fulfilledAt = fulfilledAt; }
 
-    // === Phase 4.1: Getter & Setter für die neuen Felder ===
     public Long getCarId() { return carId; }
     public void setCarId(Long carId) { this.carId = carId; }
 

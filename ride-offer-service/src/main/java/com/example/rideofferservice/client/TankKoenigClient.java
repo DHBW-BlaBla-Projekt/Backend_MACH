@@ -88,8 +88,7 @@ public class TankKoenigClient {
     private String buildUrl(Double lat, Double lng, Integer radius) {
         StringBuilder sb = new StringBuilder(baseUrl);
         sb.append("?");
-        
-        // Wenn Koordinaten angegeben sind, nutze diese
+
         if (lat != null && lng != null) {
             sb.append("lat=").append(lat);
             sb.append("&lng=").append(lng);
@@ -106,25 +105,19 @@ public class TankKoenigClient {
     }
 
     private TankKoenigApiResponse parseResponse(String body) {
-        // Einfaches JSON-Parsing ohne externe Libs — nur für die CC-API-Struktur
         try {
-            // Remove whitespace for easier parsing
             String clean = body.replaceAll("\\s+", "");
-            
-            // Check ok status
+
             if (!clean.contains("\"ok\":true") && !clean.contains("\"ok\": true")) {
                 throw new IllegalStateException("TankKoenig API returned error: " + body.substring(0, Math.min(200, body.length())));
             }
 
-            // Parse stations array — extract all numeric fields for e5, e10, diesel
             int stationsStart = clean.indexOf("\"stations\":[");
             if (stationsStart == -1) {
                 throw new IllegalStateException("No 'stations' field found in response");
             }
-            
-            // Extract the stations JSON array content
+
             int arrStart = stationsStart + "\"stations\"[".length();
-            // Find matching closing bracket
             int depth = 0;
             int arrEnd = -1;
             for (int i = arrStart; i < clean.length(); i++) {
@@ -144,8 +137,6 @@ public class TankKoenigClient {
             }
             
             String stationsJson = clean.substring(arrStart + 1, arrEnd);
-            
-            // Parse individual station objects from the JSON array
             List<Station> stations = parseStationsArray(stationsJson);
             
             if (stations.isEmpty()) {
@@ -162,14 +153,11 @@ public class TankKoenigClient {
 
     private List<Station> parseStationsArray(String stationsJson) {
         List<Station> stations = new ArrayList<>();
-        
-        // Split by station object boundaries — each starts with "{"
+
         int offset = 0;
         while (offset < stationsJson.length()) {
             int objStart = stationsJson.indexOf('{', offset);
             if (objStart == -1) break;
-            
-            // Find matching closing brace
             int depth = 0;
             int objEnd = -1;
             for (int i = objStart; i < stationsJson.length(); i++) {
@@ -178,7 +166,7 @@ public class TankKoenigClient {
                 else if (c == '}') {
                     depth--;
                     if (depth == 0) {
-                        objEnd = i + 1; // include the closing brace
+                        objEnd = i + 1;
                         break;
                     }
                 }
@@ -227,13 +215,11 @@ public class TankKoenigClient {
         int start = json.indexOf(key);
         if (start == -1) return null;
         start += key.length();
-        
-        // Skip whitespace
+
         while (start < json.length() && Character.isWhitespace(json.charAt(start))) {
             start++;
         }
-        
-        // Extract number (could be negative, decimal)
+
         StringBuilder sb = new StringBuilder();
         int end = start;
         while (end < json.length() && (Character.isDigit(json.charAt(end)) || json.charAt(end) == '.' || json.charAt(end) == '-')) {
@@ -256,7 +242,6 @@ public class TankKoenigClient {
             throw new IllegalStateException("TankKoenig API returned no station data");
         }
 
-        // Calculate averages using weighted distances (closer stations count more)
         double e5Total = 0, e10Total = 0, dieselTotal = 0;
         int count = 0;
         
@@ -271,18 +256,15 @@ public class TankKoenigClient {
             throw new IllegalStateException("No valid price data from TankKoenig API");
         }
 
-        // TankKoenig API liefert bereits EUR (z. B. 1.339), keine Konvertierung nötig
         double e5Eur = e5Total / count;
         double dieselEur = dieselTotal / count;
         double e10Eur = e10Total / count;
 
-        // PETROL = average of E5 and E10 (most common for cars)
         double superPlusPrice = (e5Eur + e10Eur) / 2.0;
 
         Map<FuelType, Double> prices = new LinkedHashMap<>();
         prices.put(FuelType.PETROL, superPlusPrice);
         prices.put(FuelType.DIESEL, dieselEur);
-        // ELECTRIC und HYBRID haben keinen direkten TankKoenig-Preis -> null (Fallback)
         prices.put(FuelType.ELECTRIC, null);
         prices.put(FuelType.HYBRID, null);
 

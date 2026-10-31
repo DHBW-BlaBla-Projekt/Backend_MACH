@@ -64,12 +64,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Öffentliche Endpunkte — KEIN Token nötig
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/rides/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/rides/*").permitAll()
-                        // Inter-service Calls vom Booking-Service erlauben (PATCH decrement/increment/cancel/book)
                         .requestMatchers(HttpMethod.PATCH, "/api/rides/*/decrement").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/rides/*/increment").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/rides/*/cancel").permitAll()

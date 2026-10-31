@@ -51,7 +51,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String role = claims.get("role", String.class);
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    // Null-safe authority: default to ROLE_USER if no role in token
                     String authority = "ROLE_" + (role != null ? role : "USER");
 
                     List<SimpleGrantedAuthority> authorities = Collections.singletonList(
@@ -63,8 +62,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (Exception e) {
-                // Token invalid — just skip auth, let @PreAuthorize or other checks decide
-                // Do NOT return 401 here; Spring Security handles unauthenticated requests
             }
         }
 

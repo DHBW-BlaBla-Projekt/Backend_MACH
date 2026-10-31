@@ -19,7 +19,7 @@ public class CarRequest {
     @NotBlank(message = "Treibstoffart ist erforderlich")
     private String fuelType; // PETROL, DIESEL, ELECTRIC, HYBRID
     
-    private String name; // Optionaler Name des Autos
+    private String name;
     
     private String licensePlate; // Optionales Kennzeichen
 

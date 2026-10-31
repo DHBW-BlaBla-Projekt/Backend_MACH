@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
-// Datenzugriffsschicht für Ratings
+
 public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     /** Prüft, ob ein bestimmter Passagier bereits eine bestimmte Fahrt bewertet hat. */

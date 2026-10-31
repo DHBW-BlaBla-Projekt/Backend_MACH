@@ -14,7 +14,7 @@ public class Car {
     @Column(name = "user_id", nullable = false)
     private Long userId; 
 
-    // Optionaler Name des Autos (z.B. "Mein Golf", "Das neue Auto")
+
     @Column(length = 50)
     private String name;
 
@@ -38,7 +38,7 @@ public class Car {
         PETROL, DIESEL, ELECTRIC, HYBRID
     }
 
-    // Konstrukteure
+
     public Car() {}
 
     public Car(Long userId, String brand, String model,
@@ -50,7 +50,7 @@ public class Car {
         this.fuelType = fuelType;
     }
 
-    // Getters & Setters
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

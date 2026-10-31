@@ -85,7 +85,7 @@ public class CarController {
         
         Car car = carOpt.get();
         
-        // Sicherheitscheck: Darf der User auf dieses Auto zugreifen?
+
         var user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new IllegalArgumentException("User nicht gefunden: " + username));
                 
@@ -105,7 +105,7 @@ public class CarController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
-        // Konvertiere die FuelType-String in das Enum
+
         Car.FuelType fuelType;
         try {
             fuelType = Car.FuelType.valueOf(request.getFuelType().toUpperCase());

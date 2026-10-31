@@ -27,7 +27,7 @@ public class Rating {
     @Column(name = "driver_username", nullable = false, length = 50)
     private String driverUsername;
 
-    // Bewertung: 1 (nieder) bis 5 (hoch)
+
     @Column(nullable = false)
     private int rating;
 

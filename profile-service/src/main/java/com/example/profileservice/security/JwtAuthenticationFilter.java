@@ -73,19 +73,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 response.getWriter().write("{\"error\": \"Invalid JWT token: " + e.getMessage() + "\"}");
-                return; // Stop filter chain — 401 returned to client
+                return;
             } catch (io.jsonwebtoken.ExpiredJwtException e) {
                 System.out.println("[JWT FILTER] Expired token: " + e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 response.getWriter().write("{\"error\": \"JWT token expired: " + e.getMessage() + "\"}");
-                return; // Stop filter chain — 401 returned to client
+                return;
             } catch (io.jsonwebtoken.security.SignatureException e) {
                 System.out.println("[JWT FILTER] Signature mismatch: " + e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 response.getWriter().write("{\"error\": \"JWT signature validation failed: " + e.getMessage() + "\"}");
-                return; // Stop filter chain — 401 returned to client
+                return;
             } catch (Exception e) {
                 System.out.println("[JWT FILTER] Unexpected error validating token: " + e.getMessage());
             }

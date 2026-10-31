@@ -58,7 +58,6 @@ public class RatingController {
      */
     @PostMapping("/rate")
     public ResponseEntity<?> rate(@RequestBody RatingRequest request) {
-        // Automatisch den aktuell authentifizierten Benutzer aus dem JWT-Token extrahieren
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(401).body(Map.of(
@@ -67,9 +66,9 @@ public class RatingController {
             ));
         }
         
-        String username = authentication.getName(); // Username aus dem JWT-Token
+        String username = authentication.getName();
 
-        // Sicherheitscheck: Der Benutzer muss existieren und aktiv sein
+
         Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).body(Map.of(

@@ -49,7 +49,7 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(jwtSecret);
     }
 
-    // CORS: Erlaubt Frontend auf beliebigen Ports/Domains
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -76,13 +76,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Öffentliche Endpunkte — KEIN Token nötig (Health/Info + User-Sync vom Auth-Service)
                         .requestMatchers(
                                 "/hello",
                                 "/api/vehicle-data/**",
-                                "/api/auth/users/sync"  // Sync-Endpunkt muss öffentlich sein (Auth-Service ruft ihn auf)
+                                "/api/auth/users/sync"
                         ).permitAll()
-                        // Alle anderen Endpunkte erfordern Authentifizierung
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)

@@ -80,9 +80,10 @@ public class SecurityConfig {
                                 "/hello",
                                 "/api/auth/register",
                                 "/api/auth/login",
-                                "/api/auth/refresh-token"
+                                "/api/auth/refresh-token",
+                                "/api/auth/logout"
                         ).permitAll()
-                        .requestMatchers("/api/auth/logout").permitAll()
+                        .requestMatchers("/graphql").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)

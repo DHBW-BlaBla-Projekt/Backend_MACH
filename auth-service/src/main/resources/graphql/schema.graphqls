@@ -1,9 +1,13 @@
 type AuthPayload {
-    accessToken: String!
-    refreshToken: String!
+    accessToken: String
+    refreshToken: String
     username: String!
     role: String!
     active: Boolean!
+}
+
+type AuthError {
+    errors: [String!]!
 }
 
 input RegisterInput {
@@ -16,9 +20,15 @@ input LoginInput {
     password: String!
 }
 
+union AuthResult = AuthPayload | AuthError
+
+type Query {
+    _empty: Boolean
+}
+
 type Mutation {
-    register(input: RegisterInput!): AuthPayload!
-    login(input: LoginInput!): AuthPayload!
-    refreshToken(refreshToken: String!): AuthPayload!
+    register(input: RegisterInput!): AuthResult!
+    login(input: LoginInput!): AuthResult!
+    refreshToken(refreshToken: String!): AuthResult!
     logout(refreshToken: String!): Boolean!
 }

@@ -49,7 +49,6 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(jwtSecret);
     }
 
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -77,7 +76,6 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/hello",
                                 "/api/vehicle-data/**",
                                 "/api/auth/users/sync"
                         ).permitAll()

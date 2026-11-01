@@ -43,8 +43,5 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("username") String username,
             @Param("status") Booking.BookingStatus status);
 
-    /**
-     * Zählt die aktiven Buchungen für eine bestimmte Mitfahrt.
-     */
     long countByRideIdAndStatus(Long rideId, Booking.BookingStatus status);
 }

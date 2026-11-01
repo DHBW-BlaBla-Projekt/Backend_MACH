@@ -21,15 +21,7 @@ public class RatingValidationController {
         this.ratingValidationService = ratingValidationService;
     }
 
-    /**
-     * Validiert, ob eine Bewertung erlaubt ist.
-     * 
-     * <p>Gibt zurück, ob der Passagier eine gültige Buchung für diese Fahrt hat.</p>
-     * 
-     * @param rideId            ID der Fahrt
-     * @param passengerUsername Username des Passagiers
-     * @return ResponseEntity mit "valid": true/false
-     */
+
     @GetMapping("/validate-rating")
     public ResponseEntity<Map<String, Object>> validateRating(
             @RequestParam Long rideId,

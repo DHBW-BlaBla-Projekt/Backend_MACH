@@ -72,11 +72,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // CORS aktivieren
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Öffentliche Endpunkte — KEIN Token nötig
                         .requestMatchers(
                                 "/hello",
                                 "/api/auth/register",

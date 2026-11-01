@@ -1,5 +1,9 @@
 package com.example.authservice.auth.dto;
 
+
+/**
+ * DTO für Loginnafrage.
+ */
 public class LoginRequest {
     private String username;
     private String password;

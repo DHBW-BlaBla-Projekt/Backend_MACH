@@ -32,7 +32,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
 
-        // Nur JWT-Tokens validieren: Muss mit "eyJ" beginnen (JWT-Standard-Kennung)
         if (token != null && isJwtToken(token)) {
             if (tokenProvider.validateToken(token)) {
                 String username = tokenProvider.getUsernameFromToken(token);
@@ -40,10 +39,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 
-                // Override authorities with the role from the token
+
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails,
-                        token,  // JWT-Token als Credential speichern – für inter-Service-Calls
+                        token,
                         Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + (role != null ? role : "USER")))
                 );
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -55,7 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    // Unterscheidet JWT-Tokens von anderen Token-Typen (z.B. Refresh-Token als UUID)
+
     private boolean isJwtToken(String token) {
         return token != null && token.startsWith("eyJ");
     }

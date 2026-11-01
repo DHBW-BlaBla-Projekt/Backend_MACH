@@ -2,6 +2,7 @@ package com.example.authservice.controller;
 
 import com.example.authservice.auth.JwtTokenProvider;
 import com.example.authservice.auth.dto.JwtResponse;
+import com.example.authservice.auth.dto.RegisterRequest;
 import com.example.authservice.auth.dto.LoginRequest;
 import com.example.authservice.client.ProfileServiceClient;
 import com.example.authservice.model.entity.RefreshToken;
@@ -75,7 +76,6 @@ public class AuthController {
         }
 
         if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
-            // Failed registration counts against the limit – schon durch tryConconsume gezählt!
             return ResponseEntity.badRequest().body(Map.of(
                     "statusCode", 400,
                     "error", "Username bereits vergeben!"));
@@ -143,7 +143,7 @@ public class AuthController {
         rateLimiter.recordSuccess(username, rateLimiter.getAttemptsByUsernameMap());
 
         User user = userRepository.findByUsernameIgnoreCase(request.getUsername()).orElseThrow();
-        
+
 
         try {
             profileServiceClient.syncUser(user.getUsername(), "", user.getRole());
@@ -213,30 +213,5 @@ public class AuthController {
                 "statusCode", 200,
                 "message", "Erfolgreich ausgeloggt!"));
     }
-
-    /**
-     * DTO für Registrierungsanfragen.
-     */
-    public static class RegisterRequest {
-        private String username;
-        private String password;
-
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
-    }
-
-    /**
-     * DTO für Login-Anfragen.
-     */
-    public static class LoginRequest {
-        private String username;
-        private String password;
-
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
-    }
 }
+

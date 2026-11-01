@@ -37,25 +37,12 @@ public class BookingController {
 
     private final BookingService bookingService;
 
-    /**
-     * Konstruktor mit Dependency Injection.
-     *
-     * @param bookingService Der Service zur Geschäftslogik für Buchungen
-     */
+
     public BookingController(BookingService bookingService) {
         this.bookingService = bookingService;
     }
 
-    /**
-     * Erstellt eine neue Buchung für eine Mitfahrt.
-     *
-     * <p>Validiert die Mitfahrt über den RideOfferClient und speichert die Buchung.</p>
-     *
-     * @param request          DTO mit den Daten der zu erstellenden Buchung
-     * @param authentication   Das aktuell authentifizierte Benutzer-Objekt
-     * @return ResponseEntity mit dem neu erstellten Buchungsdaten bei Erfolg,
-     *         400 (BAD_REQUEST) bei Validierungsfehlern oder 500 (INTERNAL_SERVER_ERROR) bei Fehlern
-     */
+
     @PostMapping
     public ResponseEntity<?> createBooking(@Valid @RequestBody CreateBookingRequest request, Authentication authentication) {
         try {
@@ -71,36 +58,19 @@ public class BookingController {
         }
     }
 
-    /**
-     * Ruft alle Buchungen für eine bestimmte Mitfahrt ab.
-     *
-     * @param rideId Die ID der Mitfahrt, für die die Buchungen abgerufen werden sollen
-     * @return ResponseEntity mit einer Liste der gefundenen {@link BookingResponse}-Objekte
-     */
+
     @GetMapping("/ride/{rideId}")
     public ResponseEntity<List<BookingResponse>> getBookingsForRide(@PathVariable Long rideId) {
         return ResponseEntity.ok(bookingService.getBookingsForRide(rideId));
     }
 
-    /**
-     * Ruft alle Buchungen des aktuell authentifizierten Benutzers ab.
-     *
-     * @param authentication Das aktuell authentifizierte Benutzer-Objekt
-     * @return ResponseEntity mit einer Liste der gefundenen {@link BookingResponse}-Objekte
-     */
+
     @GetMapping("/my-bookings")
     public ResponseEntity<List<BookingResponse>> getMyBookings(Authentication authentication) {
         return ResponseEntity.ok(bookingService.getBookingsByPassenger(authentication.getName()));
     }
 
-    /**
-     * Storniert eine Buchung.
-     *
-     * @param bookingId      Die ID der zu stornierenden Buchung
-     * @param authentication Das aktuell authentifizierte Benutzer-Objekt
-     * @return ResponseEntity mit Statuscode 200 (OK) und Erfolgsmeldung bei Erfolg,
-     *         403 (FORBIDDEN) bei fehlender Berechtigung oder 404 (NOT_FOUND) wenn die Buchung nicht existiert
-     */
+
     @DeleteMapping("/{bookingId}")
     public ResponseEntity<?> cancelBooking(@PathVariable Long bookingId, Authentication authentication) {
         try {

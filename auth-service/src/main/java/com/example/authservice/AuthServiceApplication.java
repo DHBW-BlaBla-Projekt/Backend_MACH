@@ -26,12 +26,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class AuthServiceApplication {
 
-    /**
-     * Haupteinstiegspunkt der Anwendung.
-     * Startet die Spring Boot-Anwendung und initialisiert den embedded Webserver.
-     *
-     * @param args Kommandozeilenargumente, die an die SpringApplication weitergegeben werden
-     */
 	public static void main(String[] args) {
 		SpringApplication.run(AuthServiceApplication.class, args);
 	}

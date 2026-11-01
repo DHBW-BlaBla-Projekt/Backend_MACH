@@ -1,6 +1,8 @@
 package com.example.authservice.auth.dto;
 
-
+/**
+ * DTO für Acesstoken.
+ */
 
 public class JwtResponse {
     private String accessToken;

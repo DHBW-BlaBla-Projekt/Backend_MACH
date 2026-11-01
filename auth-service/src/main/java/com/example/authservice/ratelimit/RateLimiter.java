@@ -16,9 +16,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class RateLimiter {
 
-    /**
-     * Konfigurierbare Limits.
-     */
     public interface Config {
         int MAX_ATTEMPTS = 5;
         long WINDOW_MILLIS = 60_000L; // 1 Minute
@@ -27,18 +24,12 @@ public class RateLimiter {
     private final ConcurrentHashMap<String, AttemptInfo> attemptsByIp = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AttemptInfo> attemptsByUsername = new ConcurrentHashMap<>();
 
-    /**
-     * Prüft ob ein Versuch erlaubt ist UND verbraucht gleichzeitig einen Slot.
-     * Das ist eine atomare Operation – entweder alles oder nichts.
-     * @return true wenn noch Slots verfügbar sind (und einer verbraucht wurde), false wenn das Limit erreicht ist.
-     */
     public boolean tryConsume(String key, ConcurrentHashMap<String, AttemptInfo> storage) {
         long now = System.currentTimeMillis();
 
 
         AttemptInfo info = storage.compute(key, (k, existing) -> {
             if (existing == null || (now - existing.startTime) > Config.WINDOW_MILLIS) {
-                // Neues Fenster starten – Counter auf 1 setzen
                 AttemptInfo newInfo = new AttemptInfo(now);
                 return newInfo;
             }
@@ -55,9 +46,7 @@ public class RateLimiter {
         return true;
     }
 
-    /**
-     * Gibt die verbleibenden Versuche für den gegebenen Key zurück.
-     */
+
     public long getRemainingAttempts(String key, ConcurrentHashMap<String, AttemptInfo> storage) {
         AttemptInfo info = storage.get(key);
         if (info == null) return Config.MAX_ATTEMPTS;
@@ -69,9 +58,7 @@ public class RateLimiter {
         return Math.max(0, remaining);
     }
 
-    /**
-     * Setzt den Zähler für diesen Key zurück (nach erfolgreichem Login/Registration).
-     */
+
     public void recordSuccess(String key, ConcurrentHashMap<String, AttemptInfo> storage) {
         AttemptInfo info = storage.get(key);
         if (info != null) {
@@ -83,16 +70,11 @@ public class RateLimiter {
         }
     }
 
-    /**
-     * Gibt die Map für IP-basierte Attempts zurück (für Filter-Zugriff).
-     */
+
     public ConcurrentHashMap<String, AttemptInfo> getAttemptsByIpMap() {
         return attemptsByIp;
     }
 
-    /**
-     * Gibt die Map für Username-basierte Attempts zurück (für Controller-Zugriff).
-     */
     public ConcurrentHashMap<String, AttemptInfo> getAttemptsByUsernameMap() {
         return attemptsByUsername;
     }

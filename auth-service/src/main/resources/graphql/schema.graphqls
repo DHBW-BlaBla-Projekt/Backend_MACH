@@ -1,0 +1,24 @@
+type AuthPayload {
+    accessToken: String!
+    refreshToken: String!
+    username: String!
+    role: String!
+    active: Boolean!
+}
+
+input RegisterInput {
+    username: String!
+    password: String!
+}
+
+input LoginInput {
+    username: String!
+    password: String!
+}
+
+type Mutation {
+    register(input: RegisterInput!): AuthPayload!
+    login(input: LoginInput!): AuthPayload!
+    refreshToken(refreshToken: String!): AuthPayload!
+    logout(refreshToken: String!): Boolean!
+}

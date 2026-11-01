@@ -1,24 +1,29 @@
 package com.example.authservice.graphql;
 
 import com.example.authservice.auth.JwtTokenProvider;
+import com.example.authservice.auth.dto.AuthPayload;
+import com.example.authservice.auth.dto.LoginRequest;
+import com.example.authservice.auth.dto.RegisterRequest;
 import com.example.authservice.client.ProfileServiceClient;
 import com.example.authservice.model.entity.RefreshToken;
 import com.example.authservice.model.entity.User;
 import com.example.authservice.repository.UserRepository;
 import com.example.authservice.ratelimit.RateLimiter;
 import com.example.authservice.service.RefreshTokenService;
+import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.stereotype.Controller;
+import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * GraphQL-Controller für Auth-Mutationen.
- * Die Input/Output-Typen werden über das SDL-Schema definiert.
+ * GraphQL-Mutation-Resolver für Authentifizierungsoperationen.
+ * Nutzt die shared DTOs aus auth.dto-Paket.
  */
-@Controller
+@Component
 public class AuthMutationResolver {
 
     private final UserRepository userRepository;
@@ -46,21 +51,18 @@ public class AuthMutationResolver {
         this.passwordEncoder = passwordEncoder;
     }
 
-    /**
-     * GraphQL-Mutation: register(input: RegisterInput!) → AuthPayload | AuthError
-     */
-    @graphql.GraphQLMutation(name = "register")
-    public Object register(AuthMutationResolver.RegisterInput input) {
-        String username = input.getUsername() == null ? "" : input.getUsername().trim();
-        String password = input.getPassword();
+    @MutationMapping
+    public MutationResult register(RegisterRequest input) {
+        String username = input.username() == null ? "" : input.username().trim();
+        String password = input.password();
 
         List<String> errors = validateRegister(username, password);
         if (!errors.isEmpty()) {
-            return new AuthError(errors);
+            return new MutationResult(false, null, errors);
         }
 
         if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
-            return new AuthError(List.of("Username bereits vergeben!"));
+            return new MutationResult(false, null, List.of("Username bereits vergeben!"));
         }
 
         User user = new User();
@@ -71,129 +73,128 @@ public class AuthMutationResolver {
 
         rateLimiter.recordSuccess(username, rateLimiter.getAttemptsByUsernameMap());
 
-        try { profileServiceClient.syncUser(user.getUsername(), password, user.getRole()); } catch (Exception e) { /* non-fatal */ }
+        try {
+            profileServiceClient.syncUser(user.getUsername(), password, user.getRole());
+        } catch (Exception e) {
+            // non-fatal: auth works even if profile sync fails
+        }
 
-        return new AuthPayload(null, null, username, "USER", false);
+        AuthPayload data = new AuthPayload(null, null, username, "USER", false);
+        return new MutationResult(true, data, List.of());
     }
 
-    /**
-     * GraphQL-Mutation: login(input: LoginInput!) → AuthPayload | AuthError
-     */
-    @graphql.GraphQLMutation(name = "login")
-    public Object login(AuthMutationResolver.LoginInput input) {
-        String username = input.getUsername() == null ? "" : input.getUsername().trim();
-        String password = input.getPassword();
+    @MutationMapping
+    public MutationResult login(LoginRequest input) {
+        String username = input.username() == null ? "" : input.username().trim();
+        String password = input.password();
 
         List<String> errors = validateLogin(username, password);
         if (!errors.isEmpty()) {
-            return new AuthError(errors);
+            return new MutationResult(false, null, errors);
         }
 
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password));
         } catch (AuthenticationException e) {
-            return new AuthError(List.of("Ungültiger Benutzername oder Passwort!"));
+            return new MutationResult(false, null, List.of("Ungültiger Benutzername oder Passwort!"));
         }
 
         rateLimiter.recordSuccess(username, rateLimiter.getAttemptsByUsernameMap());
 
         User user = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
 
-        try { profileServiceClient.syncUser(user.getUsername(), "", user.getRole()); } catch (Exception e) { /* non-fatal */ }
+        try {
+            profileServiceClient.syncUser(user.getUsername(), "", user.getRole());
+        } catch (Exception e) {
+            // non-fatal: auth works even if profile sync fails
+        }
 
         String accessToken = tokenProvider.generateAccessToken(user.getUsername(), user.getRole());
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
-        return new AuthPayload(accessToken, refreshToken.getToken(), user.getUsername(), user.getRole(), user.isActive());
+        AuthPayload data = new AuthPayload(
+                accessToken,
+                refreshToken.getToken(),
+                user.getUsername(),
+                user.getRole(),
+                user.isActive());
+        return new MutationResult(true, data, List.of());
     }
 
-    /**
-     * GraphQL-Mutation: refreshToken(refreshToken: String!) → AuthPayload | AuthError
-     */
-    @graphql.GraphQLMutation(name = "refreshToken")
-    public Object refreshToken(String refreshToken) {
-        if (refreshToken == null || refreshToken.isEmpty()) {
-            return new AuthError(List.of("Fehlender Refresh-Token"));
+    @MutationMapping
+    public MutationResult refreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return new MutationResult(false, null, List.of("Fehlender Refresh-Token"));
         }
 
         try {
             RefreshToken rt = refreshTokenService.validateRefreshToken(refreshToken);
             User user = rt.getUser();
             String newAccessToken = tokenProvider.generateAccessToken(user.getUsername(), user.getRole());
-            return new AuthPayload(newAccessToken, refreshToken, user.getUsername(), user.getRole(), user.isActive());
+
+            AuthPayload data = new AuthPayload(
+                    newAccessToken,
+                    refreshToken,
+                    user.getUsername(),
+                    user.getRole(),
+                    user.isActive());
+            return new MutationResult(true, data, List.of());
         } catch (RuntimeException e) {
-            return new AuthError(List.of(e.getMessage()));
+            return new MutationResult(false, null, List.of(e.getMessage()));
         }
     }
 
-    /**
-     * GraphQL-Mutation: logout(refreshToken: String!) → Boolean | AuthError
-     */
-    @graphql.GraphQLMutation(name = "logout")
-    public Object logout(String refreshToken) {
-        if (refreshToken == null || refreshToken.isEmpty()) {
-            return new AuthError(List.of("Fehlender Refresh-Token"));
+    @MutationMapping
+    public Boolean logout(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new RuntimeException("Fehlender Refresh-Token");
         }
         refreshTokenService.revokeRefreshToken(refreshToken);
         return true;
     }
 
-    // --- Validation helpers ---
-
     private List<String> validateRegister(String username, String password) {
-        var list = new java.util.ArrayList<String>();
-        if (username == null || username.isEmpty()) list.add("Username darf nicht leer sein!");
-        if (password == null || password.isEmpty()) list.add("Passwort darf nicht leer sein!");
-        if (password != null && password.length() < 8) list.add("Passwort muss mindestens 8 Zeichen lang sein!");
+        var list = new ArrayList<String>();
+        if (username == null || username.isEmpty()) {
+            list.add("Username darf nicht leer sein!");
+        }
+        if (password == null || password.isEmpty()) {
+            list.add("Passwort darf nicht leer sein!");
+        } else if (password.length() < 8) {
+            list.add("Passwort muss mindestens 8 Zeichen lang sein!");
+        }
         return list;
     }
 
     private List<String> validateLogin(String username, String password) {
-        var list = new java.util.ArrayList<String>();
-        if (username == null || username.isEmpty()) list.add("Username darf nicht leer sein!");
-        if (password == null || password.isEmpty()) list.add("Passwort darf nicht leer sein!");
+        var list = new ArrayList<String>();
+        if (username == null || username.isEmpty()) {
+            list.add("Username darf nicht leer sein!");
+        }
+        if (password == null || password.isEmpty()) {
+            list.add("Passwort darf nicht leer sein!");
+        }
         return list;
     }
 
-    // --- GraphQL Input/Output types (mapped via SDL) ---
+    // ==================== Shared GraphQL Types ====================
 
-    public record RegisterInput(String username, String password) {}
+    public static class MutationResult {
+        private final boolean success;
+        private final AuthPayload data;
+        private final List<String> errors;
 
-    public record LoginInput(String username, String password) {}
+        public MutationResult() { this(false, null, List.of()); }
 
-    public static class AuthPayload {
-        private String accessToken;
-        private String refreshToken;
-        private String username;
-        private String role;
-        private boolean active;
-
-        public AuthPayload() {}
-
-        public AuthPayload(String accessToken, String refreshToken, String username, String role, boolean active) {
-            this.accessToken = accessToken;
-            this.refreshToken = refreshToken;
-            this.username = username;
-            this.role = role;
-            this.active = active;
+        public MutationResult(boolean success, AuthPayload data, List<String> errors) {
+            this.success = success;
+            this.data = data;
+            this.errors = errors != null ? errors : List.of();
         }
 
-        public String getAccessToken() { return accessToken; }
-        public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
-        public String getRefreshToken() { return refreshToken; }
-        public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        public String getRole() { return role; }
-        public void setRole(String role) { this.role = role; }
-        public boolean isActive() { return active; }
-    }
-
-    public static class AuthError {
-        private List<String> errors;
-        public AuthError() {}
-        public AuthError(List<String> errors) { this.errors = errors; }
+        public boolean isSuccess() { return success; }
+        public AuthPayload getData() { return data; }
         public List<String> getErrors() { return errors; }
     }
 }

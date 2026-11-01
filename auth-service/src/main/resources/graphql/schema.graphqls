@@ -1,15 +1,4 @@
-type AuthPayload {
-    accessToken: String
-    refreshToken: String
-    username: String!
-    role: String!
-    active: Boolean!
-}
-
-type AuthError {
-    errors: [String!]!
-}
-
+# ==================== Input Types ====================
 input RegisterInput {
     username: String!
     password: String!
@@ -20,15 +9,39 @@ input LoginInput {
     password: String!
 }
 
-union AuthResult = AuthPayload | AuthError
-
-type Query {
-    _empty: Boolean
+# ==================== Output Types ====================
+type AuthPayload {
+    accessToken: String
+    refreshToken: String
+    username: String!
+    role: String!
+    active: Boolean!
 }
 
+type UserResponse {
+    id: ID!
+    username: String!
+    role: String!
+    active: Boolean!
+}
+
+# Generic response wrapper for mutations
+type MutationResult {
+    success: Boolean!
+    data: AuthPayload
+    errors: [String!]!
+}
+
+# ==================== Query Type ====================
+type Query {
+    currentUser: AuthPayload
+    user(username: String!): UserResponse
+}
+
+# ==================== Mutation Type ====================
 type Mutation {
-    register(input: RegisterInput!): AuthResult!
-    login(input: LoginInput!): AuthResult!
-    refreshToken(refreshToken: String!): AuthResult!
+    register(input: RegisterInput!): MutationResult!
+    login(input: LoginInput!): MutationResult!
+    refreshToken(refreshToken: String!): MutationResult!
     logout(refreshToken: String!): Boolean!
 }

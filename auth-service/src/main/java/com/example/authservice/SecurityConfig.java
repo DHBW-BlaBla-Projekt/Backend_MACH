@@ -76,19 +76,23 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/hello",
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/api/auth/refresh-token",
-                                "/api/auth/logout"
-                        ).permitAll()
+                        // Öffentliche REST-Endpunkte
+                        .requestMatchers("/hello").permitAll()
+                        .requestMatchers("/api/auth/register").permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/refresh-token").permitAll()
+                        .requestMatchers("/api/auth/logout").permitAll()
+                        // Öffentliche GraphQL-Endpunkte (Mutation + Query, da currentUser intern auth braucht)
                         .requestMatchers("/graphql").permitAll()
+                        // GraphiQL IDE (optional, für Development)
+                        .requestMatchers("/graphiql/**").permitAll()
+                        .requestMatchers("/graphql-playground").permitAll()
+                        // Alle anderen Anfragen benötigen Authentication
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(jwtAuthenticationFilter(), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
+                .addFilterAfter(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

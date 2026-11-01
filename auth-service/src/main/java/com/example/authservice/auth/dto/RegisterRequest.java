@@ -1,15 +1,6 @@
 package com.example.authservice.auth.dto;
 
 /**
- * DTO für Registrierungsanfragen.
+ * Gemeinsamer Input-DTO für Registrierung (REST + GraphQL).
  */
-public class RegisterRequest {
-        private String username;
-        private String password;
-
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-        public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
-    }
-
+public record RegisterRequest(String username, String password) {}

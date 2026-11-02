@@ -1,0 +1,18 @@
+type Ride {
+    id: ID!
+    driverUsername: String!
+    startLocation: String!
+    endLocation: String!
+    departureTime: String!
+    availableSeats: Int!
+    additionalInfo: String
+    status: String!
+    carId: ID
+    averageConsumptionLPer100km: Float
+    fuelType: String
+    estimatedCost: Float
+}
+
+type Query {
+    availableRides: [Ride!]!
+}

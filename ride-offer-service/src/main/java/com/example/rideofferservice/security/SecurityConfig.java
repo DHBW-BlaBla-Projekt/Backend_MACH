@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/rides/public/**").permitAll()
+                        .requestMatchers("/graphql").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/rides/*").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/rides/*/decrement").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/api/rides/*/increment").permitAll()

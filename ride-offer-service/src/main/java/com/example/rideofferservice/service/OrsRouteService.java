@@ -60,13 +60,15 @@ public class OrsRouteService {
     }
 
     private Coordinate geocode(String location) {
+        String normalizedLocation = location == null ? "" : location.trim();
         JsonNode response;
         try {
             response = client.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/geocode/search")
                             .queryParam("api_key", apiKey)
-                            .queryParam("text", location)
+                            .queryParam("text", normalizedLocation)
+                            .queryParam("boundary.country", "DE")
                             .queryParam("size", 1)
                             .build())
                     .retrieve()
@@ -74,10 +76,10 @@ public class OrsRouteService {
         } catch (RestClientException e) {
             throw new RouteCalculationException("OpenRouteService konnte den Ort nicht auflösen.");
         }
-        JsonNode feature = firstFeature(response, "Ort konnte nicht gefunden werden: " + location);
+        JsonNode feature = firstFeature(response, "Ort konnte nicht gefunden werden: " + normalizedLocation);
         JsonNode coordinates = feature.path("geometry").path("coordinates");
         if (!coordinates.isArray() || coordinates.size() < 2) {
-            throw new RouteCalculationException("OpenRouteService lieferte keine Koordinaten für: " + location);
+            throw new RouteCalculationException("OpenRouteService lieferte keine Koordinaten für: " + normalizedLocation);
         }
         return new Coordinate(coordinates.get(1).asDouble(), coordinates.get(0).asDouble());
     }

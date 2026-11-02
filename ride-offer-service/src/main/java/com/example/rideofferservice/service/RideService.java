@@ -204,7 +204,7 @@ public class RideService {
             FuelCostService.PriceResult priceResult = fuelCostService.calculateEstimatedFuelCost(ride, route.distanceKm());
             Double cost = priceResult.cost();
             ride.setEstimatedCost(cost);
-            log.info("Berechnete estimatedCost für Ride: {} EUR (Distanz: {} km)", cost, request.getDistanceKm());
+            log.info("Berechnete estimatedCost für Ride: {} EUR (Distanz: {} km)", cost, route.distanceKm());
         }
 
         try {

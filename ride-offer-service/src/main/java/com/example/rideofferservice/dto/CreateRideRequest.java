@@ -22,10 +22,6 @@ public class CreateRideRequest {
 
     private String additionalInfo;
 
-    @NotNull(message = "distanceKm ist erforderlich")
-    @Positive(message = "distanceKm muss > 0 sein")
-    private Double distanceKm;
-
     @NotNull(message = "carId ist erforderlich")
     private Long carId;
 
@@ -54,9 +50,6 @@ public class CreateRideRequest {
 
     public String getAdditionalInfo() { return additionalInfo; }
     public void setAdditionalInfo(String additionalInfo) { this.additionalInfo = additionalInfo; }
-
-    public Double getDistanceKm() { return distanceKm; }
-    public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
 
     public Long getCarId() { return carId; }
     public void setCarId(Long carId) { this.carId = carId; }

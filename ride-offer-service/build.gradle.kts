@@ -26,6 +26,9 @@ dependencies {
 	// Validation — fehlte bisher!
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 
+	// GraphQL
+	implementation("org.springframework.boot:spring-boot-starter-graphql")
+
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("com.h2database:h2")
 
@@ -35,6 +38,7 @@ dependencies {
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.graphql:spring-graphql-test")
 	testImplementation("org.springframework.security:spring-security-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

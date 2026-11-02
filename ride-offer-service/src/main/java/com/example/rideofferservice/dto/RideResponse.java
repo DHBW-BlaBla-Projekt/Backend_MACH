@@ -18,6 +18,13 @@ public class RideResponse {
     private Double averageConsumptionLPer100km;
     private FuelType fuelType;
     private Double estimatedCost;
+    private Double startLatitude;
+    private Double startLongitude;
+    private Double endLatitude;
+    private Double endLongitude;
+    private String routeGeometry;
+    private Double routeDistanceKm;
+    private Double routeDurationMinutes;
 
     public RideResponse() {}
 
@@ -65,7 +72,7 @@ public class RideResponse {
     }
 
     public static RideResponse fromEntityFull(RideOffer entity) {
-        return new RideResponse(
+        RideResponse response = new RideResponse(
             entity.getId(),
             entity.getDriverUsername(),
             entity.getStartLocation(),
@@ -79,6 +86,14 @@ public class RideResponse {
             entity.getFuelType(),
             entity.getEstimatedCost()
         );
+        response.startLatitude = entity.getStartLatitude();
+        response.startLongitude = entity.getStartLongitude();
+        response.endLatitude = entity.getEndLatitude();
+        response.endLongitude = entity.getEndLongitude();
+        response.routeGeometry = entity.getRouteGeometry();
+        response.routeDistanceKm = entity.getRouteDistanceKm();
+        response.routeDurationMinutes = entity.getRouteDurationMinutes();
+        return response;
     }
 
     public Long getId() { return id; }
@@ -102,5 +117,13 @@ public class RideResponse {
 
     public Double getEstimatedCost() { return estimatedCost; }
     public void setEstimatedCost(Double estimatedCost) { this.estimatedCost = estimatedCost; }
+
+    public Double getStartLatitude() { return startLatitude; }
+    public Double getStartLongitude() { return startLongitude; }
+    public Double getEndLatitude() { return endLatitude; }
+    public Double getEndLongitude() { return endLongitude; }
+    public String getRouteGeometry() { return routeGeometry; }
+    public Double getRouteDistanceKm() { return routeDistanceKm; }
+    public Double getRouteDurationMinutes() { return routeDurationMinutes; }
 
 }

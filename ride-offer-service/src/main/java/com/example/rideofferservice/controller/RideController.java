@@ -4,6 +4,7 @@ import com.example.rideofferservice.dto.CreateRideRequest;
 import com.example.rideofferservice.dto.RideResponse;
 import com.example.rideofferservice.entity.RideOffer;
 import com.example.rideofferservice.service.RideService;
+import com.example.rideofferservice.service.OrsRouteService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -74,6 +75,8 @@ public class RideController {
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (OrsRouteService.RouteCalculationException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", e.getMessage()));
         }
     }
 

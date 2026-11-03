@@ -63,6 +63,27 @@ public class RideOffer {
     @Column(name = "distance_km")
     private Double distanceKm;
 
+    @Column(name = "start_latitude")
+    private Double startLatitude;
+
+    @Column(name = "start_longitude")
+    private Double startLongitude;
+
+    @Column(name = "end_latitude")
+    private Double endLatitude;
+
+    @Column(name = "end_longitude")
+    private Double endLongitude;
+
+    @Column(name = "route_geometry", columnDefinition = "TEXT")
+    private String routeGeometry;
+
+    @Column(name = "route_distance_km")
+    private Double routeDistanceKm;
+
+    @Column(name = "route_duration_minutes")
+    private Double routeDurationMinutes;
+
     @Column(name = "estimated_cost")
     private Double estimatedCost;
 
@@ -133,6 +154,27 @@ public class RideOffer {
 
     public Double getDistanceKm() { return distanceKm; }
     public void setDistanceKm(Double distanceKm) { this.distanceKm = distanceKm; }
+
+    public Double getStartLatitude() { return startLatitude; }
+    public void setStartLatitude(Double startLatitude) { this.startLatitude = startLatitude; }
+
+    public Double getStartLongitude() { return startLongitude; }
+    public void setStartLongitude(Double startLongitude) { this.startLongitude = startLongitude; }
+
+    public Double getEndLatitude() { return endLatitude; }
+    public void setEndLatitude(Double endLatitude) { this.endLatitude = endLatitude; }
+
+    public Double getEndLongitude() { return endLongitude; }
+    public void setEndLongitude(Double endLongitude) { this.endLongitude = endLongitude; }
+
+    public String getRouteGeometry() { return routeGeometry; }
+    public void setRouteGeometry(String routeGeometry) { this.routeGeometry = routeGeometry; }
+
+    public Double getRouteDistanceKm() { return routeDistanceKm; }
+    public void setRouteDistanceKm(Double routeDistanceKm) { this.routeDistanceKm = routeDistanceKm; }
+
+    public Double getRouteDurationMinutes() { return routeDurationMinutes; }
+    public void setRouteDurationMinutes(Double routeDurationMinutes) { this.routeDurationMinutes = routeDurationMinutes; }
 
     public FuelType getFuelType() { return fuelType; }
     public void setFuelType(FuelType fuelType) { this.fuelType = fuelType; }

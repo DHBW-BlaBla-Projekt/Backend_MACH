@@ -37,6 +37,7 @@ public class RideService {
     private final ProfileServiceClient profileServiceClient;
     private final FuelCostService fuelCostService;
     private final FuelPriceCacheService fuelPriceCacheService;
+    private final OrsRouteService orsRouteService;
 
     @Value("${app.rabbitmq.exchange.name}")
     private String exchangeName;
@@ -53,7 +54,8 @@ public class RideService {
             ProfileServiceClient profileServiceClient,
             @Value("${app.rabbitmq.enabled:false}") boolean rabbitmqEnabled,
             FuelCostService fuelCostService,
-            FuelPriceCacheService fuelPriceCacheService) {
+            FuelPriceCacheService fuelPriceCacheService,
+            OrsRouteService orsRouteService) {
         this.rideRepository = rideRepository;
         this.profileServiceClient = profileServiceClient;
         
@@ -82,6 +84,7 @@ public class RideService {
         this.rabbitTemplate = template;
         this.fuelCostService = fuelCostService;
         this.fuelPriceCacheService = fuelPriceCacheService;
+        this.orsRouteService = orsRouteService;
     }
 
     public List<RideResponse> getAvailableRides() {
@@ -148,6 +151,9 @@ public class RideService {
             throw new IllegalArgumentException("Abfahrtszeit muss in der Zukunft liegen.");
         }
 
+        OrsRouteService.RouteResult route = orsRouteService.calculateRoute(
+                request.getStartLocation(), request.getEndLocation());
+
         Long carId = request.getCarId();
         Double averageConsumptionLPer100km = null;
         FuelType fuelType = null;
@@ -185,13 +191,20 @@ public class RideService {
         ride.setCarId(carId);
         ride.setAverageConsumptionLPer100km(averageConsumptionLPer100km);
         ride.setFuelType(fuelType);
-        ride.setDistanceKm(request.getDistanceKm());
+        ride.setDistanceKm(route.distanceKm());
+        ride.setStartLatitude(route.start().latitude());
+        ride.setStartLongitude(route.start().longitude());
+        ride.setEndLatitude(route.end().latitude());
+        ride.setEndLongitude(route.end().longitude());
+        ride.setRouteGeometry(route.geometry());
+        ride.setRouteDistanceKm(route.distanceKm());
+        ride.setRouteDurationMinutes(route.durationMinutes());
 
-        if (fuelType != null && averageConsumptionLPer100km != null && request.getDistanceKm() != null) {
-            FuelCostService.PriceResult priceResult = fuelCostService.calculateEstimatedFuelCost(ride, request.getDistanceKm());
+        if (fuelType != null && averageConsumptionLPer100km != null) {
+            FuelCostService.PriceResult priceResult = fuelCostService.calculateEstimatedFuelCost(ride, route.distanceKm());
             Double cost = priceResult.cost();
             ride.setEstimatedCost(cost);
-            log.info("Berechnete estimatedCost für Ride: {} EUR (Distanz: {} km)", cost, request.getDistanceKm());
+            log.info("Berechnete estimatedCost für Ride: {} EUR (Distanz: {} km)", cost, route.distanceKm());
         }
 
         try {

@@ -29,7 +29,7 @@ public class RideGraphQLResolver {
 
     private RideOffer toEntity(RideResponse response) {
         RideOffer entity = new RideOffer();
-        BeanUtils.copyProperties(response, entity, "status", "fuelType", "estimatedCost", "averageConsumptionLPer100km");
+        BeanUtils.copyProperties(response, entity, "status", "fuelType", "averageConsumptionLPer100km");
         if (response.getStatus() != null) {
             entity.setStatus(
                 switch (response.getStatus()) {

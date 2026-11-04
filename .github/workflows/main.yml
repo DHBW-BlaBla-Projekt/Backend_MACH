@@ -1,0 +1,42 @@
+name: Backend CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: ${{ matrix.service }} bauen und testen
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - auth-service
+          - booking-service
+          - profile-service
+          - ride-offer-service
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Java 17 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Service bauen, testen und Abdeckung messen
+        working-directory: ${{ matrix.service }}
+        run: bash ./gradlew build jacocoTestReport
+
+      - name: Testberichte speichern
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: testberichte-${{ matrix.service }}
+          path: |
+            ${{ matrix.service }}/build/reports/tests/test/
+            ${{ matrix.service }}/build/reports/jacoco/test/

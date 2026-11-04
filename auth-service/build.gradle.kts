@@ -39,6 +39,14 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+
+	systemProperty("spring.datasource.url", "jdbc:h2:mem:auth_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
+	systemProperty("spring.datasource.driver-class-name", "org.h2.Driver")
+	systemProperty("spring.datasource.username", "sa")
+	systemProperty("spring.datasource.password", "")
+	systemProperty("spring.jpa.properties.hibernate.dialect", "org.hibernate.dialect.H2Dialect")
+	systemProperty("spring.jpa.hibernate.ddl-auto", "create-drop")
+	systemProperty("app.jwt.secret", "ci-test-only-secret-key-for-auth-service-0123456789")
 }
 
 tasks.register("stage") {

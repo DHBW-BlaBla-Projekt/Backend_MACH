@@ -3,7 +3,7 @@ package com.example.profileservice.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
-
+// KI_LOG : 2
 public class CarRequest {
 
     @NotBlank(message = "Marke ist erforderlich")

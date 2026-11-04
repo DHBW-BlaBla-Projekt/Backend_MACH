@@ -2,7 +2,7 @@ package com.example.bookingservice.dto;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-
+// KI_LOG : 2
 public class CreateBookingRequest {
 
     @NotNull(message = "Ride ID is required")

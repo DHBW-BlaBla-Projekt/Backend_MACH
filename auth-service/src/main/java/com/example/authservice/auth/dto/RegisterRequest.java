@@ -1,7 +1,7 @@
 package com.example.authservice.auth.dto;
 
 /**
- * DTO für Registrierungsanfragen.
+ * DTO für Registrierungsanfragen. KI_LOG : 2
  */
 public class RegisterRequest {
         private String username;

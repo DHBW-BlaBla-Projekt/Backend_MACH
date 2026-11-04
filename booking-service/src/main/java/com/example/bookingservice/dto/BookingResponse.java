@@ -2,7 +2,7 @@ package com.example.bookingservice.dto;
 
 import com.example.bookingservice.entity.Booking;
 import java.time.LocalDateTime;
-
+// KI_LOG : 2
 public class BookingResponse {
 
     private Long id;

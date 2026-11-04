@@ -1,7 +1,7 @@
 package com.example.authservice.auth.dto;
 
 /**
- * DTO für Acesstoken.
+ * DTO für Acesstoken. KI_LOG : 2
  */
 
 public class JwtResponse {

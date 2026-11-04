@@ -4,6 +4,7 @@ import com.example.rideofferservice.entity.FuelType;
 import com.example.rideofferservice.entity.RideOffer;
 import java.time.LocalDateTime;
 
+//KI_LOG : 2
 public class RideResponse {
 
     private Long id;

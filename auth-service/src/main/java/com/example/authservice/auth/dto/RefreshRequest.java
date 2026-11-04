@@ -1,7 +1,7 @@
 package com.example.authservice.auth.dto;
 
 /**
- * DTO für Refreshtoken
+ * DTO für Refreshtoken KI_LOG : 2
  */
 public class RefreshRequest {
     private String refreshToken;

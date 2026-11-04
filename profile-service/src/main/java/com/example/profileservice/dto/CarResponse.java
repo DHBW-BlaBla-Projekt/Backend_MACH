@@ -1,7 +1,7 @@
 package com.example.profileservice.dto;
 
 import com.example.profileservice.model.entity.Car;
-
+// KI_LOG : 2
 public class CarResponse {
 
     private Long id;

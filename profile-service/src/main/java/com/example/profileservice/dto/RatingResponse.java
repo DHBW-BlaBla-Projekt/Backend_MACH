@@ -3,7 +3,7 @@ package com.example.profileservice.dto;
 import java.time.LocalDateTime;
 
 /**
- * Response DTO für eine Bewertung.
+ * Response DTO für eine Bewertung. KI_LOG : 2
  */
 public class RatingResponse {
 

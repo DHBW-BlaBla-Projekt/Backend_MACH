@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDateTime;
 
+// KI_LOG : 2
 public class CreateRideRequest {
 
     @NotBlank(message = "Start location is required")

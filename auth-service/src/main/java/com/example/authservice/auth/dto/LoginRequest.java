@@ -2,7 +2,7 @@ package com.example.authservice.auth.dto;
 
 
 /**
- * DTO für Loginnafrage.
+ * DTO für Loginnafrage.KI_LOG : 2
  */
 public class LoginRequest {
     private String username;

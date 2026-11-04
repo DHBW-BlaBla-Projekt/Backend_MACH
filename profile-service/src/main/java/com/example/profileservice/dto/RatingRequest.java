@@ -1,7 +1,7 @@
 package com.example.profileservice.dto;
 
 /**
- * Request DTO für das Erstellen einer neuen Bewertung.
+ * Request DTO für das Erstellen einer neuen Bewertung. KI_LOG : 2
  */
 public class RatingRequest {
 

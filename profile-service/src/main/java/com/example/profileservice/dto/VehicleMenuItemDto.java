@@ -1,5 +1,6 @@
 package com.example.profileservice.dto;
 
+// KI_LOG : 2
 public class VehicleMenuItemDto {
 
     private String value;

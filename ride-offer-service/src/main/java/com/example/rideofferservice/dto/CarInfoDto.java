@@ -3,7 +3,7 @@ package com.example.rideofferservice.dto;
 import com.example.rideofferservice.entity.FuelType;
 
 /**
- * DTO für Car-Daten vom Profile-Service.
+ * DTO für Car-Daten vom Profile-Service. KI_LOG : 2
  */
 public class CarInfoDto {
     private Long id;

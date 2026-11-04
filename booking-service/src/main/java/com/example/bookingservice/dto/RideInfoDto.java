@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
 
 /**
- * DTO zum Empfangen von Mitfahrt-Daten vom Ride-Offer-Service.
+ * DTO zum Empfangen von Mitfahrt-Daten vom Ride-Offer-Service. KI_LOG : 2
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RideInfoDto {

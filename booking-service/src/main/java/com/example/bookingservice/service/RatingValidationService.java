@@ -16,9 +16,11 @@ public class RatingValidationService {
     private static final Logger log = LoggerFactory.getLogger(RatingValidationService.class);
 
     private final BookingRepository bookingRepository;
+    private final RideOfferClient rideOfferClient;
 
-    public RatingValidationService(BookingRepository bookingRepository) {
+    public RatingValidationService(BookingRepository bookingRepository, RideOfferClient rideOfferClient) {
         this.bookingRepository = bookingRepository;
+        this.rideOfferClient = rideOfferClient;
     }
 
     /**
@@ -35,6 +37,11 @@ public class RatingValidationService {
         for (Booking booking : bookings) {
             if (booking.getStatus() == Booking.BookingStatus.CONFIRMED 
                     && passengerUsername.equalsIgnoreCase(booking.getPassengerUsername())) {
+                var ride = rideOfferClient.getRideById(rideId);
+                if (ride == null || ride.getDepartureTime() == null
+                        || ride.getDepartureTime().isAfter(java.time.LocalDateTime.now())) {
+                    continue;
+                }
                 log.debug("Bewertung erlaubt für rideId={}, passenger={}", rideId, passengerUsername);
                 return true;
             }

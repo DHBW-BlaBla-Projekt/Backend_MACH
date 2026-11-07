@@ -132,7 +132,7 @@ public class BookingService {
             }
         }
 
-        return BookingResponse.fromEntity(savedBooking);
+        return toBookingResponse(savedBooking);
     }
 
     @Transactional(readOnly = true)
@@ -157,6 +157,18 @@ public class BookingService {
         return bookingRepository.findByPassengerUsernameAndStatus(username, Booking.BookingStatus.CONFIRMED)
                 .stream()
                 .map(this::toBookingResponse)
+                .filter(booking -> booking.getDepartureTime() == null
+                        || booking.getDepartureTime().isAfter(java.time.LocalDateTime.now()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getBookingHistory(String username) {
+        return bookingRepository.findByPassengerUsernameAndStatus(username, Booking.BookingStatus.CONFIRMED)
+                .stream()
+                .map(this::toBookingResponse)
+                .filter(booking -> booking.getDepartureTime() != null
+                        && booking.getDepartureTime().isBefore(java.time.LocalDateTime.now()))
                 .collect(Collectors.toList());
     }
 

@@ -70,6 +70,11 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getBookingsByPassenger(authentication.getName()));
     }
 
+    @GetMapping("/my-history")
+    public ResponseEntity<List<BookingResponse>> getMyBookingHistory(Authentication authentication) {
+        return ResponseEntity.ok(bookingService.getBookingHistory(authentication.getName()));
+    }
+
 
     @DeleteMapping("/{bookingId}")
     public ResponseEntity<?> cancelBooking(@PathVariable Long bookingId, Authentication authentication) {

@@ -12,17 +12,20 @@ public class BookingResponse {
     private LocalDateTime createdAt;
     private String startLocation;
     private String endLocation;
+    private String driverUsername;
+    private LocalDateTime departureTime;
 
     public BookingResponse() {}
 
     public BookingResponse(Long id, Long rideId, String passengerUsername, 
                            Booking.BookingStatus status, LocalDateTime createdAt) {
-        this(id, rideId, passengerUsername, status, createdAt, null, null);
+        this(id, rideId, passengerUsername, status, createdAt, null, null, null, null);
     }
 
     public BookingResponse(Long id, Long rideId, String passengerUsername,
                            Booking.BookingStatus status, LocalDateTime createdAt,
-                           String startLocation, String endLocation) {
+                           String startLocation, String endLocation,
+                           String driverUsername, LocalDateTime departureTime) {
         this.id = id;
         this.rideId = rideId;
         this.passengerUsername = passengerUsername;
@@ -30,6 +33,8 @@ public class BookingResponse {
         this.createdAt = createdAt;
         this.startLocation = startLocation;
         this.endLocation = endLocation;
+        this.driverUsername = driverUsername;
+        this.departureTime = departureTime;
     }
 
     public static BookingResponse fromEntity(Booking entity) {
@@ -44,7 +49,9 @@ public class BookingResponse {
             entity.getStatus(),
             entity.getCreatedAt(),
             rideInfo != null ? rideInfo.getStartLocation() : null,
-            rideInfo != null ? rideInfo.getEndLocation() : null
+            rideInfo != null ? rideInfo.getEndLocation() : null,
+            rideInfo != null ? rideInfo.getDriverUsername() : null,
+            rideInfo != null ? rideInfo.getDepartureTime() : null
         );
     }
 
@@ -68,4 +75,10 @@ public class BookingResponse {
 
     public String getEndLocation() { return endLocation; }
     public void setEndLocation(String endLocation) { this.endLocation = endLocation; }
+
+    public String getDriverUsername() { return driverUsername; }
+    public void setDriverUsername(String driverUsername) { this.driverUsername = driverUsername; }
+
+    public LocalDateTime getDepartureTime() { return departureTime; }
+    public void setDepartureTime(LocalDateTime departureTime) { this.departureTime = departureTime; }
 }

@@ -39,6 +39,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://localhost:8080",
+                "https://frotnend-v3.vercel.app",
                 "http://localhost:8082",
                 "https://mfz-frontend-lovat.vercel.app"
         ));

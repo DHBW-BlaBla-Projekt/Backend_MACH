@@ -4,7 +4,6 @@ import com.example.bookingservice.dto.BookingResponse;
 import com.example.bookingservice.dto.CreateBookingRequest;
 import com.example.bookingservice.dto.RideInfoDto;
 import com.example.bookingservice.entity.Booking;
-import com.example.bookingservice.exception.BookingEventPublishException;
 import com.example.bookingservice.repository.BookingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,7 +139,7 @@ public class BookingService {
     public List<BookingResponse> getBookingsForRide(Long rideId) {
         return bookingRepository.findByRideId(rideId)
                 .stream()
-                .map(BookingResponse::fromEntity)
+                .map(this::toBookingResponse)
                 .collect(Collectors.toList());
     }
 
@@ -149,51 +148,36 @@ public class BookingService {
         // Exact match for the current user's bookings with CONFIRMED status
         return bookingRepository.findByPassengerUsernameAndStatus(username, Booking.BookingStatus.CONFIRMED)
                 .stream()
-                .map(BookingResponse::fromEntity)
+                .map(this::toBookingResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByPassenger(String username) {
-        // Exact match for all bookings by passenger
-        return bookingRepository.findByPassengerUsername(username)
+        return bookingRepository.findByPassengerUsernameAndStatus(username, Booking.BookingStatus.CONFIRMED)
                 .stream()
-                .map(BookingResponse::fromEntity)
+                .map(this::toBookingResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public void cancelBooking(Long bookingId, String username) {
-        if (rabbitTemplate == null) {
-            throw new BookingEventPublishException(
-                    "Die Buchung kann gerade nicht storniert werden, weil RabbitMQ nicht erreichbar ist.");
-        }
-
         Booking booking = bookingRepository.findByIdAndPassengerUsernameIgnoreCase(bookingId, username)
                 .orElseThrow(() -> new RuntimeException("Buchung nicht gefunden oder gehört nicht zu diesem Benutzer."));
 
         if (booking.getStatus() == Booking.BookingStatus.CANCELLED) {
-            throw new IllegalStateException("Buchung wurde bereits storniert.");
+            return;
         }
 
         booking.setStatus(Booking.BookingStatus.CANCELLED);
         booking.setActiveBookingKey(null);
         bookingRepository.save(booking);
-
-        try {
-            Map<String, Object> event = Map.of(
-                "eventType", "BOOKING_CANCELLED",
-                "bookingId", booking.getId(),
-                "rideId", booking.getRideId(),
-                "passengerUsername", booking.getPassengerUsername(),
-                "timestamp", java.time.LocalDateTime.now().toString()
-            );
-                rabbitTemplate.convertAndSend(exchangeName, bookingCancelledRoutingKey, event);
-        } catch (Exception e) {
-            throw new BookingEventPublishException(
-                    "Die Buchung konnte nicht storniert werden, weil das Event nicht gesendet werden konnte.", e);
-        }
+        rideOfferClient.incrementAvailableSeats(booking.getRideId());
 
         log.info("Buchung {} storniert von User {}", bookingId, username);
+    }
+
+    private BookingResponse toBookingResponse(Booking booking) {
+        return BookingResponse.fromEntity(booking, rideOfferClient.getRideById(booking.getRideId()));
     }
 }

@@ -78,6 +78,7 @@ public class RideOfferClient {
             log.info("Verfügbare Plätze für Mitfahrt {} inkrementiert.", rideId);
         } catch (Exception e) {
             log.error("Fehler beim Inkrementieren der verfügbaren Plätze für Ride {}: {}", rideId, e.getMessage());
+            throw new RuntimeException("Sitzplatz konnte nicht freigegeben werden: " + e.getMessage(), e);
         }
     }
 

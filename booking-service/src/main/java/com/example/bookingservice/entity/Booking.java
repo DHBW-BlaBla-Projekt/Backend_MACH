@@ -32,6 +32,7 @@ public class Booking {
     private LocalDateTime createdAt;
 
     public enum BookingStatus {
+        PENDING,
         CONFIRMED,
         CANCELLED
     }

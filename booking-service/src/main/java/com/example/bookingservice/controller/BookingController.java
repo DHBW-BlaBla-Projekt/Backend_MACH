@@ -47,7 +47,7 @@ public class BookingController {
     public ResponseEntity<?> createBooking(@Valid @RequestBody CreateBookingRequest request, Authentication authentication) {
         try {
             BookingResponse booking = bookingService.createBooking(authentication.getName(), request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(booking);
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(booking);
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (DataIntegrityViolationException e) {
@@ -56,6 +56,14 @@ public class BookingController {
         } catch (RuntimeException e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Interner Fehler: " + e.getMessage()));
         }
+
+    }
+
+    @GetMapping("/{bookingId}")
+    public ResponseEntity<?> getBooking(@PathVariable Long bookingId, Authentication authentication) {
+        return bookingService.getBooking(bookingId, authentication.getName())
+                .map(booking -> ResponseEntity.ok(booking))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
 

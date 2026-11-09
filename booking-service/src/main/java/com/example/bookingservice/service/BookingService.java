@@ -4,6 +4,7 @@ import com.example.bookingservice.dto.BookingResponse;
 import com.example.bookingservice.dto.CreateBookingRequest;
 import com.example.bookingservice.dto.RideInfoDto;
 import com.example.bookingservice.entity.Booking;
+import com.example.bookingservice.exception.BookingEventPublishException;
 import com.example.bookingservice.repository.BookingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,9 +30,6 @@ public class BookingService {
 
     @Value("${app.rabbitmq.exchange.name}")
     private String exchangeName;
-
-    @Value("${app.rabbitmq.routing.key.booking:booking.routing}")
-    private String bookingRoutingKey;
 
     @Value("${app.rabbitmq.routing.key.booking-cancelled:booking.cancelled.routing}")
     private String bookingCancelledRoutingKey;
@@ -75,61 +74,33 @@ public class BookingService {
         }
 
         Long rideId = request.getRideId();
-        RideInfoDto rideInfo = rideOfferClient.getRideById(rideId);
-        
-        if (rideInfo == null) {
-            throw new IllegalArgumentException("Mitfahrt nicht gefunden: " + rideId);
-        }
-
-        if (rideInfo.getDriverUsername() != null
-                && rideInfo.getDriverUsername().equalsIgnoreCase(username)) {
-            throw new IllegalStateException("Du kannst deine eigene Fahrt nicht buchen.");
-        }
-
         if (bookingRepository.existsByRideIdAndPassengerUsernameIgnoreCaseAndStatus(
                 rideId, username, Booking.BookingStatus.CONFIRMED)) {
             throw new IllegalStateException("Du hast diese Mitfahrt bereits gebucht.");
         }
 
-        String status = rideInfo.getStatus();
-        if (!"OFFERED".equals(status)) {
-            throw new IllegalStateException("Die Mitfahrt ist nicht mehr verfügbar. Status: " + status);
+        if (rabbitTemplate == null || !rabbitmqAvailable) {
+            throw new BookingEventPublishException("RabbitMQ ist für Buchungen nicht verfügbar.");
         }
 
-        java.time.LocalDateTime departureTime = rideInfo.getDepartureTime();
-        if (departureTime != null && departureTime.isBefore(java.time.LocalDateTime.now())) {
-            throw new IllegalStateException("Die Abfahrtszeit liegt bereits in der Vergangenheit.");
-        }
-
-
-        Integer availableSeats = rideInfo.getAvailableSeats();
-        if (availableSeats == null || availableSeats <= 0) {
-            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt.");
-        }
-
-
-        if (!rideOfferClient.tryBookSeat(rideId)) { 
-            throw new IllegalStateException("Keine freien Plätze mehr verfügbar für diese Mitfahrt."); 
-        } 
-
-        Booking booking = new Booking(rideId, username); 
-        Booking savedBooking = bookingRepository.save(booking); 
+        Booking booking = new Booking(rideId, username);
+        booking.setStatus(Booking.BookingStatus.PENDING);
+        Booking savedBooking = bookingRepository.save(booking);
 
         log.info("Neue Buchung {} erstellt für User {}, Ride {}", 
                 savedBooking.getId(), username, rideId);
 
-        if (rabbitTemplate != null) {
-            try {
-                Map<String, Object> event = Map.of(
-                    "bookingId", savedBooking.getId(),
-                    "rideId", rideId,
-                    "passengerUsername", username,
-                    "timestamp", java.time.LocalDateTime.now().toString()
-                );
-                rabbitTemplate.convertAndSend(exchangeName, bookingRoutingKey + ".created", event);
-            } catch (Exception e) {
-                log.warn("Fehler beim Senden von BookingCreatedEvent: {}", e.getMessage());
-            }
+        Map<String, Object> event = Map.of(
+                "eventType", "BOOKING_REQUESTED",
+                "bookingId", savedBooking.getId(),
+                "rideId", rideId,
+                "passengerUsername", username,
+                "timestamp", java.time.LocalDateTime.now().toString()
+        );
+        try {
+            rabbitTemplate.convertAndSend(exchangeName, "booking.requested.routing", event);
+        } catch (Exception e) {
+            throw new BookingEventPublishException("Buchungsanfrage konnte nicht über RabbitMQ gesendet werden.", e);
         }
 
         return toBookingResponse(savedBooking);
@@ -141,6 +112,12 @@ public class BookingService {
                 .stream()
                 .map(this::toBookingResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<BookingResponse> getBooking(Long bookingId, String username) {
+        return bookingRepository.findByIdAndPassengerUsernameIgnoreCase(bookingId, username)
+                .map(booking -> BookingResponse.fromEntity(booking, rideOfferClient.getRideById(booking.getRideId())));
     }
 
     @Transactional(readOnly = true)
@@ -181,12 +158,44 @@ public class BookingService {
             return;
         }
 
+        if (booking.getStatus() == Booking.BookingStatus.PENDING) {
+            booking.setStatus(Booking.BookingStatus.CANCELLED);
+            booking.setActiveBookingKey(null);
+            bookingRepository.save(booking);
+            return;
+        }
+
         booking.setStatus(Booking.BookingStatus.CANCELLED);
         booking.setActiveBookingKey(null);
         bookingRepository.save(booking);
-        rideOfferClient.incrementAvailableSeats(booking.getRideId());
+        publishBookingCancelledEvent(booking, username);
 
         log.info("Buchung {} storniert von User {}", bookingId, username);
+    }
+
+    private void publishBookingCancelledEvent(Booking booking, String username) {
+        if (rabbitTemplate == null || !rabbitmqAvailable) {
+            throw new BookingEventPublishException(
+                    "RabbitMQ ist für Buchungsstornierungen nicht verfügbar.");
+        }
+
+        try {
+            Map<String, Object> event = Map.of(
+                    "eventType", "BOOKING_CANCELLED",
+                    "bookingId", booking.getId(),
+                    "rideId", booking.getRideId(),
+                    "passengerUsername", username,
+                    "timestamp", java.time.LocalDateTime.now().toString()
+            );
+            rabbitTemplate.convertAndSend(exchangeName, bookingCancelledRoutingKey, event);
+            log.info("BookingCancelledEvent gesendet: Booking {}, Ride {}",
+                    booking.getId(), booking.getRideId());
+        } catch (Exception e) {
+            log.error("Fehler beim Senden des BookingCancelledEvents für Buchung {}: {}",
+                    booking.getId(), e.getMessage(), e);
+            throw new BookingEventPublishException(
+                    "Buchungsstornierung konnte nicht über RabbitMQ verarbeitet werden.", e);
+        }
     }
 
     private BookingResponse toBookingResponse(Booking booking) {

@@ -69,19 +69,6 @@ public class RideOfferClient {
         }
     }
 
-    public void incrementAvailableSeats(Long rideId) {
-        String url = rideOfferServiceUrl + "/api/rides/" + rideId + "/increment";
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-            restTemplate.exchange(url, HttpMethod.PATCH, entity, Void.class);
-            log.info("Verfügbare Plätze für Mitfahrt {} inkrementiert.", rideId);
-        } catch (Exception e) {
-            log.error("Fehler beim Inkrementieren der verfügbaren Plätze für Ride {}: {}", rideId, e.getMessage());
-            throw new RuntimeException("Sitzplatz konnte nicht freigegeben werden: " + e.getMessage(), e);
-        }
-    }
-
     public void notifyRideCancelled(Long rideId) {
         String url = rideOfferServiceUrl + "/api/rides/" + rideId + "/cancel";
         try {

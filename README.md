@@ -15,6 +15,17 @@ RabbitMQ miteinander kommunizieren.
 
 Die Services verwenden jeweils eine PostgreSQL-Datenbank. Ereignisse zwischen
 Auth-, Ride-Offer- und Booking-Service werden über RabbitMQ übertragen.
+Insbesondere werden Buchungsstornierungen als `BOOKING_CANCELLED` über den
+Routing Key `booking.cancelled.routing` an die Queue
+`ride-offer-booking-cancelled-queue` gesendet. Der Ride-Offer-Service gibt den
+Sitzplatz anschließend über seinen RabbitMQ-Consumer wieder frei.
+Die Queue und ihr Binding werden bereits beim Start des Booking-Service
+angelegt, sodass Stornierungsereignisse auch dann gesammelt werden können,
+wenn der Ride-Offer-Service vorübergehend mit null Dynos läuft.
+Beim Erstellen einer Buchung wird kein ungenutztes `BOOKING_CREATED`-Event
+publiziert. Die Sitzplatzreservierung erfolgt weiterhin synchron über den
+bestehenden Ride-Offer-Aufruf; dadurch entstehen keine absichtlich
+unroutbaren Nachrichten im RabbitMQ-Exchange.
 
 ## Voraussetzungen
 

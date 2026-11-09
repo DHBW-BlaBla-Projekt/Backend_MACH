@@ -44,4 +44,5 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("status") Booking.BookingStatus status);
 
     long countByRideIdAndStatus(Long rideId, Booking.BookingStatus status);
+
 }

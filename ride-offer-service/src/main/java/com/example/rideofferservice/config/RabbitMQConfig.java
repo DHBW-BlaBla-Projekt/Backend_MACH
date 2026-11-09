@@ -29,6 +29,11 @@ public class RabbitMQConfig {
     @Value("${app.rabbitmq.routing.key.booking-cancelled}")
     private String bookingCancelledRoutingKey;
 
+    @Value("${app.rabbitmq.queue.booking-request}")
+    private String bookingRequestQueueName;
+
+    @Value("${app.rabbitmq.routing.key.booking-result}")
+    private String bookingResultRoutingKey;
     /**
      * Erstelle den Topic-Exchange für Ride-Offer-Events.
      */
@@ -48,6 +53,19 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(bookingCancelledQueue)
                 .to(rideOfferExchange)
                 .with(bookingCancelledRoutingKey);
+    }
+
+    @Bean
+    public Queue bookingRequestQueue() {
+        return QueueBuilder.durable(bookingRequestQueueName).build();
+    }
+
+    @Bean
+    public Binding bookingRequestBinding(
+            Queue bookingRequestQueue, TopicExchange rideOfferExchange) {
+        return BindingBuilder.bind(bookingRequestQueue)
+                .to(rideOfferExchange)
+                .with("booking.requested.routing");
     }
 
     /**

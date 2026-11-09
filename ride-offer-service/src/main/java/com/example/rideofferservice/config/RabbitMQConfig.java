@@ -5,6 +5,7 @@ import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -62,7 +63,8 @@ public class RabbitMQConfig {
 
     @Bean
     public Binding bookingRequestBinding(
-            Queue bookingRequestQueue, TopicExchange rideOfferExchange) {
+            @Qualifier("bookingRequestQueue") Queue bookingRequestQueue,
+            TopicExchange rideOfferExchange) {
         return BindingBuilder.bind(bookingRequestQueue)
                 .to(rideOfferExchange)
                 .with("booking.requested.routing");

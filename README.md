@@ -119,6 +119,7 @@ PATCH /api/rides/{id}/book
 POST /api/bookings
 GET  /api/bookings/my-bookings
 GET  /api/bookings/my-history
+GET  /api/bookings/{bookingId}
 
 GET  /api/profile/users/{username}/ratings
 GET  /api/profile/users/{username}/average-rating
@@ -130,6 +131,13 @@ Geschützte Endpunkte erwarten ein JWT im Header:
 ```text
 Authorization: Bearer <token>
 ```
+
+`POST /api/bookings` nimmt die Buchungsanfrage an und liefert `202 Accepted`
+mit einer Buchung im Status `PENDING`. Die Reservierung wird über RabbitMQ
+verarbeitet. Der aktuelle Status kann anschließend über
+`GET /api/bookings/{bookingId}` abgefragt werden. Nach erfolgreicher
+Sitzplatzreservierung wechselt der Status zu `CONFIRMED`; bei einer Ablehnung
+zu `CANCELLED`.
 
 ## GraphQL-API
 

@@ -34,37 +34,17 @@ public class BookingService {
     @Value("${app.rabbitmq.routing.key.booking-cancelled:booking.cancelled.routing}")
     private String bookingCancelledRoutingKey;
 
+    @Value("${app.rabbitmq.routing.key.booking-request:booking.requested.routing}")
+    private String bookingRequestRoutingKey;
+
     public BookingService(BookingRepository bookingRepository,
                           RideOfferClient rideOfferClient,
-                          org.springframework.amqp.rabbit.connection.CachingConnectionFactory connectionFactory,
+                          RabbitTemplate rabbitTemplate,
                           @Value("${app.rabbitmq.enabled:false}") boolean rabbitmqEnabled) {
         this.bookingRepository = bookingRepository;
         this.rideOfferClient = rideOfferClient;
-
-        boolean available = false;
-        if (rabbitmqEnabled) {
-            try (var conn = connectionFactory.createConnection()) {
-                available = true;
-            } catch (Exception e) {
-                log.warn("RabbitMQ nicht verfügbar: {}", e.getMessage());
-            }
-        }
-
-        this.rabbitmqAvailable = available;
-
-        org.springframework.amqp.rabbit.core.RabbitTemplate template;
-        try {
-            if (available) {
-                template = new RabbitTemplate(connectionFactory);
-                template.setMessageConverter(new org.springframework.amqp.support.converter.Jackson2JsonMessageConverter());
-            } else {
-                template = null;
-            }
-        } catch (Exception e) {
-            log.warn("RabbitTemplate konnte nicht erstellt werden.");
-            template = null;
-        }
-        this.rabbitTemplate = template;
+        this.rabbitmqAvailable = rabbitmqEnabled;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     @Transactional
@@ -98,12 +78,12 @@ public class BookingService {
                 "timestamp", java.time.LocalDateTime.now().toString()
         );
         try {
-            rabbitTemplate.convertAndSend(exchangeName, "booking.requested.routing", event);
+            rabbitTemplate.convertAndSend(exchangeName, bookingRequestRoutingKey, event);
         } catch (Exception e) {
             throw new BookingEventPublishException("Buchungsanfrage konnte nicht über RabbitMQ gesendet werden.", e);
         }
 
-        return toBookingResponse(savedBooking);
+        return BookingResponse.fromEntity(savedBooking);
     }
 
     @Transactional(readOnly = true)

@@ -48,6 +48,9 @@ public class BookingController {
         try {
             BookingResponse booking = bookingService.createBooking(authentication.getName(), request);
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(booking);
+        } catch (BookingEventPublishException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", e.getMessage()));
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (DataIntegrityViolationException e) {
